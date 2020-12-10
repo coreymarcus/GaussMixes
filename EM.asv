@@ -1,0 +1,67 @@
+%This script performs some simple Expectation Maximization for learning
+%purposes
+
+clear
+close all
+clc
+
+addpath("../matlabScripts")
+
+%% Initialization
+
+%seed
+rng(3)
+
+%initialize the true system
+mu_true = [1, 4];
+var_true = [.1, .2];
+w_true = [0.5, 0.5];
+
+%draw measurements
+N = 10;
+y = zeros(N,1);
+for ii = 1:N
+    %which distribution do we draw from
+    idx = randi(2,1);
+    
+    %draw
+    y(ii) = mvnrnd(mu_true(idx),var_true(idx));
+end
+
+%plot measurements
+% figure
+% hist(y)
+
+%% E-M
+
+%initial guess for all parameters
+mu_hat = [.4, 5];
+var_hat = [.2, .1];
+w_hat = [.4 .6];
+
+%initialize gamma's and n's
+gamma = zeros(N,2); %prob that (row) measurement from (col) gaussian
+n = zeros(2,1); %intermediate variable
+
+% E-step
+
+%cycle through measurements
+for ii = 1:N
+    
+    %cycle through gaussians
+    for jj = 1:2
+        gamma(ii,jj) = w_hat(jj)*gaussEval(y(ii),mu_hat(jj),var_hat(jj));
+    end
+    
+    %normalize
+    gamma(ii,:) = gamma(ii,:)/sum(gamma(ii,:));
+end
+
+%calculate n
+n(1) = sum(gamma(:,1));
+n(2) = sum(gamma(:,2));
+
+% M-step
+w_hat = n/N;
+mu_hat(1) = sum(gamma(:,1).*y)/n(1);
+mu
