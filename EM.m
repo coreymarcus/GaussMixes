@@ -82,6 +82,7 @@ end
 EMmodel.mu = mu_hat;
 EMmodel.var = var_hat;
 EMmodel.w = w_hat';
+EMmodel.k = k;
 
 end
 
