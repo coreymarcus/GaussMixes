@@ -6,7 +6,7 @@ clc
 rng(6);
 
 %path for gauss eval
-addpath('C:\Users\cm58349\Github\AdvancedEstimationProject')
+addpath('..\matlabScripts')
 
 %domain
 xdomain = [0 1];
