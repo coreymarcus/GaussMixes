@@ -20,17 +20,13 @@ x2 = 4;
 sig2 = .1;
 
 %draw some initial points
-Ninit = 100;
+Ninit = 10;
 x_init = (x2 - x1)*rand(Ninit,1) + x1;
 y_init = m_true*x_init + b_true;
 
 %corrupt with noise
 x_meas = mvnrnd(x_init, sig2*eye(Ninit))';
 y_meas = mvnrnd(y_init, sig2*eye(Ninit))';
-
-%we'll artificially inflate the line estimate variance with some fake
-%process noise
-Q = 0.0001*sig2*eye(2);
 
 %perform an initial total least squares estimate
 [m_hat, b_hat, Phat] = TLS(x_meas,y_meas, sig2, sig2);
@@ -48,46 +44,32 @@ plot(x_sample,y_sample,'b')
 
 %begin estimation
 Ncycle = 100;
-Ndraw = 100;
+Ndraw = 2;
 for ii = 1:Ncycle
     
     %draw truth
-    x_draw = (x2 - x1)*rand(Ndraw,1) + x1;
-    y_draw = m_true*x_draw + b_true;
+    x_true = (x2 - x1)*rand(Ndraw,1) + x1;
+    y_true = m_true*x_true + b_true;
     
     %corrupt with noise
-    x_draw = mvnrnd(x_draw, sig2*eye(Ndraw))';
-    y_draw = mvnrnd(y_draw, sig2*eye(Ndraw))';
+    x_draw = mvnrnd(x_true, sig2*eye(Ndraw))';
+    y_draw = mvnrnd(y_true, sig2*eye(Ndraw))';
     x_meas = [x_meas; x_draw];
     y_meas = [y_meas; y_draw];
     
     %grab old estimates
     xbar = xhat(:,end);
-    mbar = xbar(1);
-    bbar = xbar(2);
     Pbar = Phat(:,:,end);
     
-    %create H, z and zbar
-    H = zeros(Ndraw,2);
-    z = zeros(Ndraw,1);
-    zbar = zeros(Ndraw,1);
-    for jj = 1:Ndraw
-        H(jj,1) = x_draw(jj)/sqrt(1+mbar^2) - (bbar + mbar*x_draw(jj) - y_draw(jj))*mbar*(1+mbar^2)^(-1.5);
-        H(jj,2) = 1/sqrt(1+mbar^2);
-        z(jj) = (bbar + mbar*x_draw(jj) - y_draw(jj))/sqrt(1+mbar^2);
-    end
+    %create H
+    H = ones(Ndraw,2);
+    H(:,1) = x_draw;
     
-    %measurement noise
-    R = (mbar^2*sig2 + sig2)/(1+mbar^2);
+    %create total dispersion matrix
+    Q = blkdiag(sig2*eye(Ndraw),zeros(Ndraw),sig2*eye(Ndraw));
     
-    %calculate covariances
-    Pxz = H*Pbar;
-    Pzz = H*Pbar*H' + R*eye(Ndraw);
-    
-    %update
-    xhat_new = xbar + Pxz'/Pzz*(z - zbar);
-    Phat_new = Pbar - Pxz'/Pzz*Pxz;
-    Phat_new = 0.5*(Phat_new + Phat_new');
+    %Call weighted total Kalman Filter
+    [xhat_new, Phat_new] = WTKF(y_draw, xbar, Pbar, Q, H);
     
     xhat(:,end+1) = xhat_new;
     Phat(:,:,end+1) = Phat_new;
@@ -102,22 +84,30 @@ Nsample = 10;
 x_sample = linspace(x1,x2,Nsample);
 y_sampleBatch = m_hat_final*x_sample + b_hat_final;
 y_sampleKF = xhat(1,end)*x_sample + xhat(2,end);
+y_sampleInit = xhat(1,1)*x_sample + xhat(2,1);
 figure
 scatter(x_meas,y_meas,'rx');
 hold on
-plot(x_sample,y_sampleBatch,'b',x_sample,y_sampleKF,'k')
-legend('data','batch','KF','location','best')
+plot(x_sample,y_sampleBatch,'b',x_sample,y_sampleKF,'k',...
+    x_sample,y_sampleInit,'g')
+legend('data','batch','KF','Initial','location','best')
 
 figure
 subplot(2,1,1)
 plot(xhat(1,:))
+title("Estimate")
+ylabel('m')
 grid on
 subplot(2,1,2)
 plot(xhat(2,:))
 grid on
+ylabel('b')
 
 figure
 subplot(2,1,1)
 semilogy(squeeze(Phat(1,1,:)))
+title('Variance')
+ylabel('var(m)')
 subplot(2,1,2)
 semilogy(squeeze(Phat(2,2,:)))
+ylabel('var(b)')
