@@ -24,7 +24,7 @@ while loopcontinue
     
     %find lambda
     term1 = N - kron((mu_rhat + xhat)',Im)*M;
-    lamb_iter = inv(term1*Q*term1' + A_i*(theta_i + Phi_i*Phat*Phi_i')*(A_i - E_rhatAi)')*(y - A_i*xhat);
+    lamb_iter = (term1*Q*term1' + A_i*(theta_i + Phi_i*Phat*Phi_i')*(A_i - E_rhatAi)')\(y - A_i*xhat);
     E_rhat = Q*term1'*lamb_iter;
     mu_rhat = (theta_i + Phi_i*Phat*Phi_i')*(A_i - E_rhatAi)'*lamb_iter;
     
@@ -48,11 +48,15 @@ while loopcontinue
     lamb_tilde = lamb_iter;
 end
 
-
 %Step Three: Calculate the update
 xhat_new = xhat + mu_rhat;
 Phat_new = kron(theta_i + Phi_i*Phat*Phi_i',lamb_tilde')*M*Q*M'*kron(theta_i + Phi_i*Phat*Phi_i',lamb_tilde')'...
     + Phi_i*Phat*Phi_i';
+
+%check optimization conditions
+cond1 = E_rhat'*inv(Q) - lamb_tilde'*(N - kron((mu_rhat+xhat_new)',Im)*M);
+cond2 = mu_rhat'*inv(theta_i + Phi_i*Phat*Phi_i') - lamb_tilde'*(A_i - E_rhatAi);
+cond3 = y - A_i*(mu_rhat + xhat_new) + kron((mu_rhat+xhat_new)',Im)*M*E_rhat - N*E_rhat;
 
 end
 

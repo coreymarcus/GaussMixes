@@ -42,9 +42,16 @@ scatter(x_meas,y_meas,'rx');
 hold on
 plot(x_sample,y_sample,'b')
 
-%begin estimation
+%RTKF parameters
 Ncycle = 100;
 Ndraw = 2;
+Phi = eye(2); %static problem
+Sigma_w = sig2*eye(Ndraw);
+Sigma_e = sig2*eye(Ndraw);
+C_A = -1*[eye(Ndraw);
+    zeros(Ndraw)];
+
+%begin estimation
 for ii = 1:Ncycle
     
     %draw truth
@@ -57,21 +64,15 @@ for ii = 1:Ncycle
     x_meas = [x_meas; x_draw];
     y_meas = [y_meas; y_draw];
     
-    %grab old estimates
-    xbar = xhat(:,end);
-    Pbar = Phat(:,:,end);
-    
     %create H
     H = ones(Ndraw,2);
     H(:,1) = x_draw;
     
-    disp(H - [x_true, [1 1]'])
+    %C_L seems to be current estimate of slope
+    C_L = xhat(1,end)*eye(Ndraw);
     
-    %create total dispersion matrix
-    Q = blkdiag(sig2*eye(Ndraw),zeros(Ndraw),sig2*eye(Ndraw));
-    
-    %Call weighted total Kalman Filter
-    [xhat_new, Phat_new] = WTKF(y_draw, xbar, Pbar, Q, H);
+    %Call robust total Kalman Filter
+    [xhat_new, Phat_new] = RTKF(xhat(:,end), Phat(:,:,end), Phi, Sigma_w, Sigma_e, H, y_draw, C_A, C_L);
     
     xhat(:,end+1) = xhat_new;
     Phat(:,:,end+1) = Phat_new;

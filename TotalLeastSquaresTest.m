@@ -94,11 +94,11 @@ P_xy = R_st2xy*P_st*R_st2xy';
 
 %plot
 figure
-plot(x_sample,y_true,x_sample,y_sample_TLS,x_sample,y_sample_LS)
+plot(x_sample,y_true,x_sample,y_sample_TLS,x_sample,y_sample_LS,'LineWidth',2)
 hold on
 scatter(x_meas,y_meas,'x')
 scatter(avg_x,avg_y)
-plot_elipse(gcf, P_xy, [avg_x; avg_y], 3, 'k', false)
+plot_elipse(gcf, P_xy, [avg_x; avg_y], 3, '--k', false)
 plot_elipse(gcf, P_xy + R, [avg_x; avg_y], 3, 'g', false)
 legend('True','TLS','LS','Measurements','Midpoint',...
     '3 \sigma covariance ellipse for Gauss',...
