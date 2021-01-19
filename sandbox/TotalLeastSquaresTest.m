@@ -3,7 +3,7 @@ clear
 close all
 clc
 
-addpath("../matlabScripts")
+addpath("../../matlabScripts")
 
 %setup truth
 m_true = 2;
