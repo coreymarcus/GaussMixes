@@ -38,7 +38,7 @@ while outerlogic
         L_tilde = L - E_A*xhat_last;
         K = inv(Pbar)*A_tilde'*inv(A*Pbar*A' + M);
         xhat_new = xbar + K*(L_tilde - A_tilde*xbar);
-        Phat_new = (eye(n) - K*A_tilde)*Pbar*(eye(n) - K*A_tilde)' + K*Sigma_w*K';
+        Phat_new = (eye(n) - K*A_tilde)*Pbar*(eye(n) - K*A_tilde)' + K*M*K';
         
         %enforce Phat > 0
         Phat_new = 0.5*(Phat_new + Phat_new');

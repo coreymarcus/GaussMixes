@@ -13,14 +13,14 @@ m_true = 2;
 b_true = 1;
 
 %x domain
-x1 = 1;
+x1 = -1;
 x2 = 4;
 
 %variances of measurement noises
 sig2 = .1;
 
 %draw some initial points
-Ninit = 3;
+Ninit = 4;
 x_init = (x2 - x1)*rand(Ninit,1) + x1;
 y_init = m_true*x_init + b_true;
 
@@ -42,40 +42,51 @@ scatter(x_meas,y_meas,'rx');
 hold on
 plot(x_sample,y_sample,'b')
 
-%RTKF parameters
-Ncycle = 100;
-Ndraw = 2;
-Phi = eye(2); %static problem
-Sigma_w = 0*eye(Ndraw); %zero process noise
-Sigma_e = sig2*eye(Ndraw);
-C_A = [eye(Ndraw);
-    zeros(Ndraw)];
-
 %begin estimation
+Ncycle = 300;
+Ndraw = 2;
+
+%fluff
+F = 0*ones(2);
+
+%measurment noise covariance matrix
+R = sig2*eye(Ndraw);
+Q = sig2*eye(Ndraw);
 for ii = 1:Ncycle
     
     %draw truth
-    x_true = (x2 - x1)*rand(Ndraw,1) + x1;
-    y_true = m_true*x_true + b_true;
+    x_draw = (x2 - x1)*rand(Ndraw,1) + x1;
+    y_draw = m_true*x_draw + b_true;
     
     %corrupt with noise
-    x_draw = mvnrnd(x_true, sig2*eye(Ndraw))';
-    y_draw = mvnrnd(y_true, sig2*eye(Ndraw))';
+    x_draw = mvnrnd(x_draw, R)';
+    y_draw = mvnrnd(y_draw, Q)';
     x_meas = [x_meas; x_draw];
     y_meas = [y_meas; y_draw];
     
+    %grab old estimates
+    xbar = xhat(:,end);
+    mbar = xbar(1);
+    bbar = xbar(2);
+    Pbar = Phat(:,:,end);
+    
     %create H
     H = ones(Ndraw,2);
-    H(:,1) = x_draw;
+    for jj = 1:Ndraw
+        H(jj,1) = x_draw(jj);
+    end
     
-    %C_L seems to be current estimate of slope
-    C_L = xhat(1,end)*eye(Ndraw);
+    %calculate covariances
+    Pxz = H*Pbar;
+    Pzz = H*Pbar*H' + R + (Pbar(1,1)*sig2 + sig2*xbar(1))*eye(Ndraw);
     
-    %Call robust total Kalman Filter
-    [xhat_new, Phat_new] = RTKF(xhat(:,end), Phat(:,:,end), Phi, Sigma_w, Sigma_e, H, y_draw, C_A, C_L);
+    %update
+    xhat_new = xbar + Pxz'/Pzz*(y_draw - H*xbar);
+    Phat_new = Pbar - Pxz'/Pzz*Pxz;
+    Phat_new = 0.5*(Phat_new + Phat_new');
     
     xhat(:,end+1) = xhat_new;
-    Phat(:,:,end+1) = Phat_new;
+    Phat(:,:,end+1) = Phat_new + F;
     
 end
 
@@ -87,30 +98,26 @@ Nsample = 10;
 x_sample = linspace(x1,x2,Nsample);
 y_sampleBatch = m_hat_final*x_sample + b_hat_final;
 y_sampleKF = xhat(1,end)*x_sample + xhat(2,end);
-y_sampleInit = xhat(1,1)*x_sample + xhat(2,1);
 figure
 scatter(x_meas,y_meas,'rx');
 hold on
-plot(x_sample,y_sampleBatch,'b',x_sample,y_sampleKF,'k',...
-    x_sample,y_sampleInit,'g')
-legend('data','batch','KF','Initial','location','best')
+plot(x_sample,y_sampleBatch,'b',x_sample,y_sampleKF,'k')
+legend('data','batch','KF','location','best')
 
 figure
 subplot(2,1,1)
 plot(xhat(1,:))
-title("Estimate")
-ylabel('m')
+hold on
+plot(m_hat_final*ones(length(xhat(1,:))),'g');
 grid on
 subplot(2,1,2)
 plot(xhat(2,:))
+hold on
+plot(b_hat_final*ones(length(xhat(1,:))),'g');
 grid on
-ylabel('b')
-
-figure
-subplot(2,1,1)
-semilogy(squeeze(Phat(1,1,:)))
-title('Variance')
-ylabel('var(m)')
-subplot(2,1,2)
-semilogy(squeeze(Phat(2,2,:)))
-ylabel('var(b)')
+% 
+% figure
+% subplot(2,1,1)
+% semilogy(squeeze(Phat(1,1,:)))
+% subplot(2,1,2)
+% semilogy(squeeze(Phat(2,2,:)))
