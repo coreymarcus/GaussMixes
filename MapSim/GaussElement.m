@@ -105,6 +105,8 @@ classdef GaussElement
                 obj.s2 = max(s);
             end          
             
+            %update number of observations
+            obj.Nobs = obj.Nobs + n;
             
         end
     end

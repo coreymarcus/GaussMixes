@@ -6,7 +6,7 @@ clc
 %parameters
 mu_x = 4;
 var_x = 1;
-mu_z = 0;
+mu_z = 2;
 var_z = 0.5;
 N = 1000000;
 mu_w = 0;
@@ -27,3 +27,9 @@ mean(x.*(x.*z) - mean(x.*(x.*z)))
 %Pyy
 var(y)
 var_x + var_w + var_x*var_z + var_z*mu_x^2
+
+%test
+q = x.*z;
+
+figure
+hist(q,100)
