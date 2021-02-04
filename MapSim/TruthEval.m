@@ -19,7 +19,14 @@ for ii = 1:n
             end
         case 'Parabola'
             
-            h(ii) = 0.1*x(ii)^2;
+            h(ii) = 0.05*x(ii)^2;
+            
+        case 'Rock'
+            if(abs(x(ii)) > 0.5)
+                h(ii) = 0;
+            else
+                h(ii) = cos(pi*x(ii));
+            end
             
         otherwise
             disp("Error: Invalid Truth Shape!")

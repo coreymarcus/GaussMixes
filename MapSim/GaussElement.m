@@ -39,7 +39,7 @@ classdef GaussElement
             var_t = [pt_pm, pt_pb]*P*[pt_pm; pt_pb];
             
             %approximate the variance in the s direction
-            k_unif = 0.33; %hueristic for scaling uniform variance
+            k_unif = 1.0; %hueristic for scaling uniform variance
             var_s = k_unif*(1/12)*(max_s - min_s)^2;
             
             %now, rotate covariance into the cartesian frame

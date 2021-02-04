@@ -11,7 +11,9 @@ addpath("../sandbox/")
 addpath("../../matlabScripts")
 
 %truth shape
-truthshape = 'DoubleRamp';
+% truthshape = 'DoubleRamp';
+truthshape = 'Parabola';
+% truthshape = 'Rock';
 
 
 %% Main
@@ -25,12 +27,12 @@ x_init = (x2 - x1)*rand(Nmeasinit,1) + x1;
 y_init = TruthEval(x_init,truthshape);
 
 %corrupt with noise
-sig2 = 0.01;
+sig2 = 0.1;
 x_meas = mvnrnd(x_init, sig2*eye(Nmeasinit))';
 y_meas = mvnrnd(y_init, sig2*eye(Nmeasinit))';
 
 %use k-means to initialize the grouping
-Ngauss = 1;
+Ngauss = 5;
 [~, ~, w_init, group_idx] = kMeans(Ngauss, [x_meas, y_meas]');
 
 %create a figure for use later
@@ -38,8 +40,8 @@ hand = figure;
 plot(x1:.1:x2,TruthEval(x1:.1:x2,truthshape))
 
 % form a cell array of the gaussian elements
-gauss_list = cell(Ngauss,1);
-gauss_plot_handle = cell(Ngauss,1);
+gauss_list = cell(1,Ngauss);
+gauss_plot_handle = cell(1,Ngauss);
 for ii = 1:Ngauss
     
     %target idx
@@ -83,8 +85,8 @@ for ii = 1:Ngauss
 end
 
 % Update with new measurements
-Ndraw = 25;
-Nupdate = 20;
+Ndraw = 50;
+Nupdate = 15;
 for ii = 1:Nupdate
     
     %draw a new set of measurements
@@ -123,7 +125,7 @@ for ii = 1:Nupdate
         
         %determine which one is the best fit
         [minval, minidx] = min(sigdist(jj,:));
-        if(minidx < 1.5)
+        if(minidx < 2)
             fitidx(jj) = minidx(1);
         end
     end
@@ -169,10 +171,8 @@ for ii = 1:Nupdate
         %update gaussian estimate
         gauss_list{jj} = gauss_list{jj}.Line2GaussUpdate();
         
-        disp(gauss_list{jj}.s2 - gauss_list{jj}.s1)
-        
         %check to see if we should split this gaussian
-        if((gauss_list{jj}.s2 - gauss_list{jj}.s1) > 10)
+        if((gauss_list{jj}.s2 - gauss_list{jj}.s1) > 1)
             [gauss_list{jj}, gauss_list_new{end+1}] = gauss_list{jj}.SplitElement();
             gauss_plot_handle_new{end+1} = gauss_plot_handle{jj};
         end
@@ -201,3 +201,9 @@ for ii = 1:Nupdate
     
     
 end
+
+%plot the final results
+pdf_plot = figure;
+[~, xmax, yargmax] = PlotGM(pdf_plot,gauss_list,x1,x2,x1,x2,.05);
+plot3(x1:.1:x2,TruthEval(x1:.1:x2,truthshape),100*ones(length(x1:.1:x2),1),'k','LineWidth',2)
+plot3(xmax, yargmax,100*ones(length(xmax),1),'r','LineWidth',2)
