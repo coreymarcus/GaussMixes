@@ -39,7 +39,72 @@ classdef GaussElement
             var_t = [pt_pm, pt_pb]*P*[pt_pm; pt_pb];
             
             %approximate the variance in the s direction
-            k_unif = 1.0; %hueristic for scaling uniform variance
+            k_unif = .5; %hueristic for scaling uniform variance
+            var_s = k_unif*(1/12)*(max_s - min_s)^2;
+            
+            %now, rotate covariance into the cartesian frame
+            P_st = [var_s, 0;
+                0, var_t];
+            theta = atan(m_hat);
+            R_st2xy = [cos(theta), -sin(theta);
+                sin(theta), cos(theta)];
+            
+            %updated variables
+            obj.P_xy = R_st2xy*P_st*R_st2xy';
+            obj.mu_xy = [avg_x; avg_y];
+            
+        end
+        
+        function obj = Gauss2LineUpdate(obj)
+            %Gauss2LineUpdate takes the estimate of the gaussian and uses
+            %it to overwrite the estimate of the line
+            
+            %extract local variables
+            P = obj.P_xy;
+            mu = obj.mu_xy;
+            
+            %we now need to perform an eigen decomposition on P to
+            %detirmine the larger scaled eigenvector
+            [V, D] = eig(P);
+            v1 = V(:,1)*D(1,1);
+            v2 = V(:,2)*D(2,2);
+            if(norm(v1) > norm(v2))
+                %v1 is the major axis
+                m_hat = v1(2)/v1(1);
+                theta = atan2(v1(2),v1(1));
+                
+            elseif(norm(v1) < norm(v2))
+                %v2 is the major axis
+                m_hat = v2(2)/v1(1);
+                theta = atan2(v2(2),v2(1));
+                
+            else
+                %the eigen values are probably the same, so we just take a
+                %flat line
+                m_hat = 0;
+                
+            end
+            
+            %calculate the y intercept
+            b_hat = mu(2) - m_hat*mu(1);
+            
+            %rotate the covariance matrix into the s-t domain
+            R_xy2st = [cos(theta), -sin(theta);
+                sin(theta), cos(theta)]';
+            P_st = R_xy2st*P*R_xy2st';
+            
+            %find midpoint of the line
+            avg_s = 0.5*(min_s + max_s);
+            avg_x = avg_s/sqrt(1+m_hat^2);
+            avg_y = avg_x*m_hat + b_hat;
+            
+            %approximate the variance in the t direction
+            pt_pm = avg_x/sqrt(1+m_hat^2) - (b_hat + m_hat*avg_x - avg_y)*m_hat*(1+m_hat^2)^(-1.5);
+            pt_pb = 1/sqrt(1+m_hat^2);
+            var_t = [pt_pm, pt_pb]*P*[pt_pm; pt_pb];
+            
+            %approximate the variance in the s direction
+            k_unif = .5; %hueristic for scaling uniform variance
             var_s = k_unif*(1/12)*(max_s - min_s)^2;
             
             %now, rotate covariance into the cartesian frame

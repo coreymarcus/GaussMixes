@@ -32,7 +32,7 @@ x_meas = mvnrnd(x_init, sig2*eye(Nmeasinit))';
 y_meas = mvnrnd(y_init, sig2*eye(Nmeasinit))';
 
 %use k-means to initialize the grouping
-Ngauss = 5;
+Ngauss = 2;
 [~, ~, w_init, group_idx] = kMeans(Ngauss, [x_meas, y_meas]');
 
 %create a figure for use later
@@ -125,7 +125,7 @@ for ii = 1:Nupdate
         
         %determine which one is the best fit
         [minval, minidx] = min(sigdist(jj,:));
-        if(minidx < 2)
+        if(minidx < 3)
             fitidx(jj) = minidx(1);
         end
     end
@@ -172,7 +172,7 @@ for ii = 1:Nupdate
         gauss_list{jj} = gauss_list{jj}.Line2GaussUpdate();
         
         %check to see if we should split this gaussian
-        if((gauss_list{jj}.s2 - gauss_list{jj}.s1) > 1)
+        if((gauss_list{jj}.s2 - gauss_list{jj}.s1) > .1)
             [gauss_list{jj}, gauss_list_new{end+1}] = gauss_list{jj}.SplitElement();
             gauss_plot_handle_new{end+1} = gauss_plot_handle{jj};
         end
