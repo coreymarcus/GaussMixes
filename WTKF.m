@@ -51,8 +51,8 @@ end
 
 %Step Three: Calculate the update
 xhat_new = xhat + mu_rhat;
-Phat_new = kron(theta_i + Phi_i*Phat*Phi_i',lamb_tilde')*M*Q*M'*kron(theta_i + Phi_i*Phat*Phi_i',lamb_tilde')'...
-    + Phi_i*Phat*Phi_i';
+Phat_new = kron(theta_i + Phi_i*Phat*Phi_i',lamb_tilde')*M*Q*M'*...
+    kron(theta_i + Phi_i*Phat*Phi_i',lamb_tilde')' + Phi_i*Phat*Phi_i';
 
 end
 
