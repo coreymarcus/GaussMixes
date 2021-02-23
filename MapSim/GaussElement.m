@@ -62,6 +62,8 @@ classdef GaussElement
             %extract local variables
             P = obj.P_xy;
             mu = obj.mu_xy;
+            avg_x = mu(1);
+            avg_y = mu(2);
             
             %we now need to perform an eigen decomposition on P to
             %detirmine the larger scaled eigenvector
@@ -75,7 +77,7 @@ classdef GaussElement
                 
             elseif(norm(v1) < norm(v2))
                 %v2 is the major axis
-                m_hat = v2(2)/v1(1);
+                m_hat = v2(2)/v2(1);
                 theta = atan2(v2(2),v2(1));
                 
             else
@@ -86,37 +88,36 @@ classdef GaussElement
             end
             
             %calculate the y intercept
-            b_hat = mu(2) - m_hat*mu(1);
+            b_hat = avg_y - m_hat*avg_x;
             
             %rotate the covariance matrix into the s-t domain
             R_xy2st = [cos(theta), -sin(theta);
                 sin(theta), cos(theta)]';
             P_st = R_xy2st*P*R_xy2st';
             
-            %find midpoint of the line
-            avg_s = 0.5*(min_s + max_s);
-            avg_x = avg_s/sqrt(1+m_hat^2);
-            avg_y = avg_x*m_hat + b_hat;
+            %extract
+            var_s = P_st(1,1);
+            var_t = P_st(2,2);
             
-            %approximate the variance in the t direction
+            %find the s values
+            k_unif = 0.5;
+            srange = sqrt(12*var_s/k_unif);
+            avg_s = avg_x*sqrt(1+m_hat^2);
+            min_s = avg_s - 0.5*srange;
+            max_s = avg_s + 0.5*srange;
+            
+            %partial derivatives
             pt_pm = avg_x/sqrt(1+m_hat^2) - (b_hat + m_hat*avg_x - avg_y)*m_hat*(1+m_hat^2)^(-1.5);
             pt_pb = 1/sqrt(1+m_hat^2);
-            var_t = [pt_pm, pt_pb]*P*[pt_pm; pt_pb];
             
-            %approximate the variance in the s direction
-            k_unif = .5; %hueristic for scaling uniform variance
-            var_s = k_unif*(1/12)*(max_s - min_s)^2;
-            
-            %now, rotate covariance into the cartesian frame
-            P_st = [var_s, 0;
-                0, var_t];
-            theta = atan(m_hat);
-            R_st2xy = [cos(theta), -sin(theta);
-                sin(theta), cos(theta)];
+            %assume variance of m and b is equivalent
+            var_mb = var_t/([pt_pm, pt_pb]*[pt_pm, pt_pb]');
             
             %updated variables
-            obj.P_xy = R_st2xy*P_st*R_st2xy';
-            obj.mu_xy = [avg_x; avg_y];
+            obj.s1 = min_s;
+            obj.s2 = max_s;
+            obj.P_mb = var_mb*eye(2);
+            obj.mu_mb = [m_hat; b_hat];
             
         end
         
@@ -175,7 +176,7 @@ classdef GaussElement
             
         end
         
-        %detirmine how likely it was that a measurement came from this
+        %determine how likely it was that a measurement came from this
         %gaussian element
         function [p] = GaussEval(obj, x, y, R)
             
@@ -269,7 +270,7 @@ classdef GaussElement
             
         end
         
-        function plothandle = PlotElement(obj, handle)
+        function plothandle = PlotElement(obj, handle, idx)
             
             %switch to the current figure
             figure(handle)
@@ -329,6 +330,7 @@ classdef GaussElement
             plothandle = plot([x1 x2],[y1 y2],'--x',...
                 r_ellipse(:,1)+obj.mu_xy(1),r_ellipse(:,2)+obj.mu_xy(2),...
                 'LineWidth',2);
+            text(x1,y1,string(idx))
             
         end
         
