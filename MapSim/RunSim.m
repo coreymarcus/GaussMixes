@@ -12,21 +12,23 @@ addpath("../../matlabScripts")
 
 %truth shape
 % truthshape = 'DoubleRamp';
-% truthshape = 'Parabola';
-truthshape = 'Rock';
+truthshape = 'Parabola';
+% truthshape = 'Rock';
 
 %how long to stop and smell the flowers
-pauselength = 0;
+pauselength = .1;
 
 %maximum lenght of an element
-maxlength = .5;
+maxlength = 4;
 
 %threshold for merging two gaussians
-mergethresh = 2;
+mergethresh = 2.5;
 
 %domain
-x1 = -2;
-x2 = 2;
+% x1 = -2;
+% x2 = 2;
+x1 = -10;
+x2 = 10;
 
 %seed
 rng(3);
