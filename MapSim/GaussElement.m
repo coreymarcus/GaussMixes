@@ -39,7 +39,7 @@ classdef GaussElement
             var_t = [pt_pm, pt_pb]*P*[pt_pm; pt_pb];
             
             %approximate the variance in the s direction
-            k_unif = .5; %hueristic for scaling uniform variance
+            k_unif = 1; %hueristic for scaling uniform variance
             var_s = k_unif*(1/12)*(max_s - min_s)^2;
             
             %now, rotate covariance into the cartesian frame
@@ -150,18 +150,7 @@ classdef GaussElement
             obj.P_mb = Phat;
             
             %for all measurements, calculate the s value
-            s = zeros(1,n);
-            for ii = 1:n
-                
-                %find s, this should be simplified somehow
-                gamma = y(ii) + x(ii)/xhat(1);
-                A = [1, -xhat(1);
-                    1, 1/xhat(1)];
-                inter = A\[xhat(2); gamma];
-                xinter = inter(2);
-                s(ii) = xinter*sqrt(1+xhat(1)^2);
-                
-            end
+            s = obj.CalcTransDist(x, y);
             
             %consider updating s1 and s2
             if(min(s) < min_s)
@@ -173,6 +162,61 @@ classdef GaussElement
             
             %update number of observations
             obj.Nobs = obj.Nobs + n;
+            
+        end
+        
+        function obj = UpdateLineEstimateUKF(obj, x, P_x, y, P_y)
+            %Line 2 gauss update performs an update of the line estimate
+            %using a unscented kalman filter
+            
+            %extract local variables
+            xhat = obj.mu_mb;
+            min_s = obj.s1;
+            max_s = obj.s2;
+            Phat = obj.P_xy;
+            n = length(y); %number of measurements
+            
+            %create H
+            H = ones(n,2);
+            H(:,1) = x;
+            
+%             %calculate covariances
+%             Pxy = Phat*H';
+%             Pyy = H*Phat*H' + P_y + eye(n)*((Phat(1,1) + xhat(1)).*diag(P_x));
+%             
+%             %kalman gain
+%             K = Pxy/Pyy;
+%             
+%             %update
+%             xhat = xhat + K*(y - H*xhat);
+%             Phat = (eye(2) - K*H)*Phat*(eye(2) - K*H)' + K*P_y*K';
+%             obj.mu_mb = xhat;
+%             obj.P_mb = Phat;
+%             
+%             %for all measurements, calculate the s value
+%             s = zeros(1,n);
+%             for ii = 1:n
+%                 
+%                 %find s, this should be simplified somehow
+%                 gamma = y(ii) + x(ii)/xhat(1);
+%                 A = [1, -xhat(1);
+%                     1, 1/xhat(1)];
+%                 inter = A\[xhat(2); gamma];
+%                 xinter = inter(2);
+%                 s(ii) = xinter*sqrt(1+xhat(1)^2);
+%                 
+%             end
+%             
+%             %consider updating s1 and s2
+%             if(min(s) < min_s)
+%                 obj.s1 = min(s);
+%             end
+%             if(max(s) > max_s)
+%                 obj.s2 = max(s);
+%             end
+%             
+%             %update number of observations
+%             obj.Nobs = obj.Nobs + n;
             
         end
         
@@ -200,7 +244,7 @@ classdef GaussElement
         
         %detirmine how likely it was that a measurement came from this
         %line segment
-        function [p] = GaussEvalST(obj, x, y, ~)
+        function [p] = GaussEvalST(obj, x, y)
             
             %extract local variables
             m_hat = obj.mu_mb(1);
@@ -228,7 +272,7 @@ classdef GaussElement
             
             %just approximate p_s
             if((s < max_s+1) && (s > min_s -1))
-                p_s = 1;
+                p_s = 1/(max_s - min_s);
             else
                 p_s = 0;
             end
@@ -277,7 +321,7 @@ classdef GaussElement
             hold on
             
             %sigma value for ellipse
-            sigma = 1.5;
+            sigma = 1;
             
             % Calculate the eigenvectors and eigenvalues
             [eigenvec, eigenval ] = eig(obj.P_xy);
@@ -334,6 +378,30 @@ classdef GaussElement
             
         end
         
+        %calculate the s value for a given point
+        function sval = CalcTransDist(obj, x_meas, y_meas)
+            
+            %extract local variables
+            xhat = obj.mu_mb;
+            n = length(y_meas); %number of measurements
+            
+            %for all measurements, calculate the s value
+            sval = zeros(1,n);
+            for ii = 1:n
+                
+                %find s, this should be simplified somehow
+                gamma = y_meas(ii) + x_meas(ii)/xhat(1);
+                A = [1, -xhat(1);
+                    1, 1/xhat(1)];
+                inter = A\[xhat(2); gamma];
+                xinter = inter(2);
+                sval(ii) = xinter*sqrt(1+xhat(1)^2);
+                
+            end
+            
+            
+        end
+        
         % Split an element by halving the s domain
         function [obj1, obj2] = SplitElement(obj)
             
@@ -359,6 +427,7 @@ classdef GaussElement
             
             
         end
+        
     end
 end
 

@@ -15,23 +15,33 @@ addpath("../../matlabScripts")
 truthshape = 'Parabola';
 % truthshape = 'Rock';
 
+%how do we evaluate the GM at the end
+% GMevalmeth = 'gauss'; %uses the standard gaussian
+GMevalmeth = 'mixed'; %uses a mixed representation based on s and t
+
 %how long to stop and smell the flowers
-pauselength = .1;
+pauselength = 0;
 
 %maximum lenght of an element
-maxlength = 4;
+maxlength = 3;
 
 %threshold for merging two gaussians
-mergethresh = 2.5;
+mergethresh = 1.25;
 
 %domain
 % x1 = -2;
 % x2 = 2;
 x1 = -10;
 x2 = 10;
+Ndem = 50; %number of DEM bins
 
 %seed
 rng(3);
+
+%latex
+set(0,'defaulttextInterpreter','latex');
+set(groot, 'defaultAxesTickLabelInterpreter','latex');
+set(groot, 'defaultLegendInterpreter','latex');
 
 %% Main
 
@@ -42,7 +52,7 @@ x_init = (x2 - x1)*rand(Nmeasinit,1) + x1;
 y_init = TruthEval(x_init,truthshape);
 
 %corrupt with noise
-sig2 = 0.01;
+sig2 = 0.25;
 x_meas = mvnrnd(x_init, sig2*eye(Nmeasinit))';
 y_meas = mvnrnd(y_init, sig2*eye(Nmeasinit))';
 
@@ -53,6 +63,12 @@ Ngauss = 2;
 %create a figure for use later
 hand = figure;
 plot(x1:.1:x2,TruthEval(x1:.1:x2,truthshape))
+
+%initialize the DEM estimate
+xhatDEM = zeros(Ndem,1);
+PhatDEM = ones(Ndem,1);
+grid = linspace(x1-1,x2+1,Ndem);
+[xhatDEM, PhatDEM] = updateDEM(xhatDEM, PhatDEM, x_meas, y_meas, grid, sig2);
 
 %pool of un-used measurements
 unused_meas = [];
@@ -115,6 +131,9 @@ for ii = 1:Nupdate
     %corrupt with noise
     x_meas = mvnrnd(x_draw, sig2*eye(Ndraw))';
     y_meas = mvnrnd(y_draw, sig2*eye(Ndraw))';
+    
+    %update the DEM
+    [xhatDEM, PhatDEM] = updateDEM(xhatDEM, PhatDEM, x_meas, y_meas, grid, sig2);
     
     
     %     %evaluate the liklihood that each measurement came from each gaussian
@@ -218,10 +237,10 @@ for ii = 1:Nupdate
     %measurements
     
     Nunuse = size(unused_meas,2);
-    if(Nunuse >= 20)
+    if(Nunuse >= 30)
         
         %test a variety of different clusers
-        maxk = floor(Nunuse/20);
+        maxk = floor(Nunuse/30);
         %         testmodels = cell(maxk,1);
         %         for jj = 1:maxk
         %             testmodels{jj} = fitgmdist(unused_meas',jj,'Options',statset('MaxIter',300));
@@ -240,7 +259,7 @@ for ii = 1:Nupdate
             %eigen decompose
             D = eig(modelcov(:,:,jj));
 
-            if(max(D) < maxlength)
+            if(max(D) < 0.5*maxlength)
                 %this should be a new element!
                 
                 %cluster the data
@@ -352,13 +371,38 @@ for ii = 1:Nupdate
         gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(hand, jj);
     end
     pause(pauselength)
-    
-    
-    
+
 end
+
+
+%% Plotting
 
 %plot the final results
 pdf_plot = figure;
-[~, xmax, yargmax] = PlotGM(pdf_plot,gauss_list,x1,x2,x1,x2,.05);
-plot3(x1:.1:x2,TruthEval(x1:.1:x2,truthshape),10000*ones(length(x1:.1:x2),1),'k','LineWidth',2)
-plot3(xmax, yargmax,10000*ones(length(xmax),1),'r','LineWidth',2)
+[~, xmax, yargmax, maxGM] = PlotGM(pdf_plot,gauss_list,x1,x2,x1,x2,.05,GMevalmeth);
+plot3(x1:.1:x2,TruthEval(x1:.1:x2,truthshape),maxGM*ones(length(x1:.1:x2),1),'k','LineWidth',2)
+plot3(xmax, yargmax,maxGM*ones(length(xmax),1),'r','LineWidth',2)
+xlabel('x')
+ylabel('y')
+legend('PDF','True Surface','Estimated Surface')
+
+DEM_plot = figure;
+[~, xmaxDEM, yargmaxDEM, maxDEM] = PlotDEM(DEM_plot, xhatDEM, PhatDEM, grid, x1,x2,x1,x2,.1,.001);
+plot3(x1:.1:x2,TruthEval(x1:.1:x2,truthshape),maxDEM*ones(length(x1:.1:x2),1),'k','LineWidth',2)
+plot3(xmaxDEM, yargmaxDEM, maxDEM*ones(length(xmaxDEM),1),'r','LineWidth',2)
+
+
+%get the height estimate at each point
+xsample = x1:.05:x2;
+Nsample = length(xsample);
+slopeGM = zeros(Nsample,1);
+for ii = 1:Nsample
+    slopeGM(ii) = GetGMSlopeEstimate(gauss_list,xsample(ii));
+end
+[~, slopetruth] = TruthEval(xsample,truthshape);
+
+%plot
+GMslope_plot = figure;
+plot(xsample,slopeGM,'LineWidth',2);
+hold on
+plot(xsample,slopetruth,'LineWidth',2);
