@@ -19,6 +19,10 @@ truthshape = 'Parabola';
 % GMevalmeth = 'gauss'; %uses the standard gaussian
 GMevalmeth = 'mixed'; %uses a mixed representation based on s and t
 
+% how do we choose our slope estimate?
+slopemethod = "ML"; %maximum liklihood
+% slopemethod = "MMSE";
+
 %how long to stop and smell the flowers
 pauselength = 0;
 
@@ -385,19 +389,23 @@ plot3(xmax, yargmax,maxGM*ones(length(xmax),1),'r','LineWidth',2)
 xlabel('x')
 ylabel('y')
 legend('PDF','True Surface','Estimated Surface')
+title('PDF From GM')
 
 DEM_plot = figure;
 [~, xmaxDEM, yargmaxDEM, maxDEM] = PlotDEM(DEM_plot, xhatDEM, PhatDEM, grid, x1,x2,x1,x2,.1,.001);
 plot3(x1:.1:x2,TruthEval(x1:.1:x2,truthshape),maxDEM*ones(length(x1:.1:x2),1),'k','LineWidth',2)
 plot3(xmaxDEM, yargmaxDEM, maxDEM*ones(length(xmaxDEM),1),'r','LineWidth',2)
+title('PDF from DEM')
 
 
-%get the height estimate at each point
+%get the slope estimate at each point
 xsample = x1:.05:x2;
 Nsample = length(xsample);
 slopeGM = zeros(Nsample,1);
+slopeDEM = zeros(Nsample,1);
 for ii = 1:Nsample
-    slopeGM(ii) = GetGMSlopeEstimate(gauss_list,xsample(ii));
+    slopeGM(ii) = GetGMSlopeEstimate(gauss_list,xsample(ii),slopemethod);
+    slopeDEM(ii) = GetDEMSlopeEstimate(xhatDEM, grid, xsample(ii));
 end
 [~, slopetruth] = TruthEval(xsample,truthshape);
 
@@ -406,3 +414,11 @@ GMslope_plot = figure;
 plot(xsample,slopeGM,'LineWidth',2);
 hold on
 plot(xsample,slopetruth,'LineWidth',2);
+title({'GM Slope Estimate',slopemethod})
+
+%plot
+DEMslope_plot = figure;
+plot(xsample,slopeDEM,'LineWidth',2);
+hold on
+plot(xsample,slopetruth,'LineWidth',2);
+title('DEM slope estimate')
