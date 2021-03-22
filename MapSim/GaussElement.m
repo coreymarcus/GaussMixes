@@ -220,6 +220,52 @@ classdef GaussElement
             
         end
         
+        function obj = UpdateLineEstimateTLS(obj, x, sig2_x, y, sig2_y)
+            %Line 2 gauss update performs an update of the line estimate
+            %using a modified kalman filter
+            
+            %extract local variables
+            xhat = obj.mu_mb;
+            min_s = obj.s1;
+            max_s = obj.s2;
+            Phat = obj.P_xy;
+            n = length(y); %number of measurements
+            
+            %perform TLS to get measurements of m and b
+            [y_m, y_b, R] = TLS(x, y, sig2_x, sig2_y);
+            
+            %create H
+            H = eye(2);
+            
+            %calculate covariances
+            Pxy = Phat*H';
+            Pyy = H*Phat*H' + R;
+            
+            %kalman gain
+            K = Pxy/Pyy;
+            
+            %update
+            xhat = xhat + K*([y_m; y_b] - H*xhat);
+            Phat = (eye(2) - K*H)*Phat*(eye(2) - K*H)' + K*R*K';
+            obj.mu_mb = xhat;
+            obj.P_mb = Phat;
+            
+            %for all measurements, calculate the s value
+            s = obj.CalcTransDist(x, y);
+            
+            %consider updating s1 and s2
+            if(min(s) < min_s)
+                obj.s1 = min(s);
+            end
+            if(max(s) > max_s)
+                obj.s2 = max(s);
+            end
+            
+            %update number of observations
+            obj.Nobs = obj.Nobs + n;
+            
+        end
+        
         %determine how likely it was that a measurement came from this
         %gaussian element
         function [p] = GaussEval(obj, x, y, R)

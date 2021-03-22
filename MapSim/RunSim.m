@@ -32,6 +32,10 @@ maxlength = 3;
 %threshold for merging two gaussians
 mergethresh = 1.25;
 
+%estimator for line
+% estimator = 'KF';
+estimator = 'TLS';
+
 %domain
 % x1 = -2;
 % x2 = 2;
@@ -202,14 +206,29 @@ for ii = 1:Nupdate
         Ntargs = sum(targs);
         
         %zero protection
-        if(Ntargs == 0)
+        if(Ntargs <= 1)
             continue;
         end
+%         
+%         if(ii == 7 && jj == 5)
+%             disp('pause here')
+%         end
         
         %update line estimate
-        gauss_list{jj} = gauss_list{jj}.UpdateLineEstimateKF(...
-            x_meas(targs), sig2*eye(Ntargs),...
-            y_meas(targs), sig2*eye(Ntargs));
+        switch estimator
+            case 'KF'
+                gauss_list{jj} = gauss_list{jj}.UpdateLineEstimateKF(...
+                    x_meas(targs), sig2*eye(Ntargs),...
+                    y_meas(targs), sig2*eye(Ntargs));
+                
+            case 'TLS'
+                 gauss_list{jj} = gauss_list{jj}.UpdateLineEstimateTLS(...
+                    x_meas(targs), sig2,...
+                    y_meas(targs), sig2);
+                
+            otherwise
+                disp('Error: invalid estimator!')
+        end
         
         %update gaussian estimate
         gauss_list{jj} = gauss_list{jj}.Line2GaussUpdate();

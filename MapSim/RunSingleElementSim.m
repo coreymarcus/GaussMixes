@@ -27,6 +27,7 @@ set(groot, 'defaultLegendInterpreter','latex');
 
 %estimator for line
 estimator = 'KF';
+% estimator = 'TLS';
 
 %how long to stop and smell the flowers
 pauselength = 1;
@@ -80,7 +81,7 @@ obj = obj.Line2GaussUpdate();
 
 
 % Update with new measurements
-Ndraw = 3;
+Ndraw = 20;
 Nupdate = 15;
 for ii = 1:Nupdate
     
@@ -96,7 +97,7 @@ for ii = 1:Nupdate
     dataplot = plot(x_meas,y_meas,'x','LineWidth',0.1,'MarkerSize',10);
     axis([-2.5 2.5 -1 6])
     
-    %plotting        
+    %plotting
     plot_handle = obj.PlotElement(hand, 1);
     pause(pauselength);
     
@@ -105,21 +106,36 @@ for ii = 1:Nupdate
     delete(plot_handle)
     
     %perform the update
-    obj = obj.UpdateLineEstimateKF(x_meas, sig2*eye(Ndraw), y_meas, sig2*eye(Ndraw));
-        
+    switch estimator
+        case 'KF'
+            obj = obj.UpdateLineEstimateKF(x_meas, sig2*eye(Ndraw), y_meas, sig2*eye(Ndraw));
+            
+        case 'TLS'
+            obj = obj.UpdateLineEstimateTLS(x_meas, sig2, y_meas, sig2);
+            
+        otherwise
+            disp('Error: invalid estimator')
+    end
+    
+    
     %update gaussian estimate
     obj = obj.Line2GaussUpdate();
-
+    
     %plot
     plot_handle = obj.PlotElement(hand, 1);
     axis([-2.5 2.5 -1 6])
     pause(pauselength);
     
     %delete
-    delete(findall(gcf,'type','text')) %delete all exisiting text
-    delete(plot_handle)
-    delete(dataplot)
+    if(ii ~= Nupdate)
+        delete(findall(gcf,'type','text')) %delete all exisiting text
+        delete(plot_handle)
+        delete(dataplot)
+    end
     
     
     
 end
+
+obj.mu_mb
+obj.P_mb
