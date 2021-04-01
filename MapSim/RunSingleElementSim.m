@@ -26,8 +26,8 @@ set(groot, 'defaultAxesTickLabelInterpreter','latex');
 set(groot, 'defaultLegendInterpreter','latex');
 
 %estimator for line
-estimator = 'KF';
-% estimator = 'TLS';
+% estimator = 'KF';
+estimator = 'TLS';
 
 %how long to stop and smell the flowers
 pauselength = 1;
@@ -116,7 +116,6 @@ for ii = 1:Nupdate
         otherwise
             disp('Error: invalid estimator')
     end
-    
     
     %update gaussian estimate
     obj = obj.Line2GaussUpdate();

@@ -27,7 +27,7 @@ slopemethod = "ML"; %maximum liklihood
 pauselength = 0;
 
 %maximum lenght of an element
-maxlength = 3;
+maxlength = 5;
 
 %threshold for merging two gaussians
 mergethresh = 1.25;
@@ -41,7 +41,8 @@ estimator = 'TLS';
 % x2 = 2;
 x1 = -10;
 x2 = 10;
-Ndem = 50; %number of DEM bins
+% Ndem = floor((x2 - x1)/maxlength)+1; %number of DEM bins
+Ndem = 10; %number of DEM bins
 
 %seed
 rng(3);
@@ -260,10 +261,10 @@ for ii = 1:Nupdate
     %measurements
     
     Nunuse = size(unused_meas,2);
-    if(Nunuse >= 30)
+    if(Nunuse >= 40)
         
         %test a variety of different clusers
-        maxk = floor(Nunuse/30);
+        maxk = floor(Nunuse/40);
         %         testmodels = cell(maxk,1);
         %         for jj = 1:maxk
         %             testmodels{jj} = fitgmdist(unused_meas',jj,'Options',statset('MaxIter',300));

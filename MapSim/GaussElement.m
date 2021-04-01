@@ -129,7 +129,7 @@ classdef GaussElement
             xhat = obj.mu_mb;
             min_s = obj.s1;
             max_s = obj.s2;
-            Phat = obj.P_xy;
+            Phat = obj.P_mb;
             n = length(y); %number of measurements
             
             %create H
@@ -165,60 +165,60 @@ classdef GaussElement
             
         end
         
-        function obj = UpdateLineEstimateUKF(obj, x, P_x, y, P_y)
-            %Line 2 gauss update performs an update of the line estimate
-            %using a unscented kalman filter
-            
-            %extract local variables
-            xhat = obj.mu_mb;
-            min_s = obj.s1;
-            max_s = obj.s2;
-            Phat = obj.P_xy;
-            n = length(y); %number of measurements
-            
-            %create H
-            H = ones(n,2);
-            H(:,1) = x;
-            
-%             %calculate covariances
-%             Pxy = Phat*H';
-%             Pyy = H*Phat*H' + P_y + eye(n)*((Phat(1,1) + xhat(1)).*diag(P_x));
+%         function obj = UpdateLineEstimateUKF(obj, x, P_x, y, P_y)
+%             %Line 2 gauss update performs an update of the line estimate
+%             %using a unscented kalman filter
 %             
-%             %kalman gain
-%             K = Pxy/Pyy;
+%             %extract local variables
+%             xhat = obj.mu_mb;
+%             min_s = obj.s1;
+%             max_s = obj.s2;
+%             Phat = obj.P_mb;
+%             n = length(y); %number of measurements
 %             
-%             %update
-%             xhat = xhat + K*(y - H*xhat);
-%             Phat = (eye(2) - K*H)*Phat*(eye(2) - K*H)' + K*P_y*K';
-%             obj.mu_mb = xhat;
-%             obj.P_mb = Phat;
+%             %create H
+%             H = ones(n,2);
+%             H(:,1) = x;
 %             
-%             %for all measurements, calculate the s value
-%             s = zeros(1,n);
-%             for ii = 1:n
-%                 
-%                 %find s, this should be simplified somehow
-%                 gamma = y(ii) + x(ii)/xhat(1);
-%                 A = [1, -xhat(1);
-%                     1, 1/xhat(1)];
-%                 inter = A\[xhat(2); gamma];
-%                 xinter = inter(2);
-%                 s(ii) = xinter*sqrt(1+xhat(1)^2);
-%                 
-%             end
+% %             %calculate covariances
+% %             Pxy = Phat*H';
+% %             Pyy = H*Phat*H' + P_y + eye(n)*((Phat(1,1) + xhat(1)).*diag(P_x));
+% %             
+% %             %kalman gain
+% %             K = Pxy/Pyy;
+% %             
+% %             %update
+% %             xhat = xhat + K*(y - H*xhat);
+% %             Phat = (eye(2) - K*H)*Phat*(eye(2) - K*H)' + K*P_y*K';
+% %             obj.mu_mb = xhat;
+% %             obj.P_mb = Phat;
+% %             
+% %             %for all measurements, calculate the s value
+% %             s = zeros(1,n);
+% %             for ii = 1:n
+% %                 
+% %                 %find s, this should be simplified somehow
+% %                 gamma = y(ii) + x(ii)/xhat(1);
+% %                 A = [1, -xhat(1);
+% %                     1, 1/xhat(1)];
+% %                 inter = A\[xhat(2); gamma];
+% %                 xinter = inter(2);
+% %                 s(ii) = xinter*sqrt(1+xhat(1)^2);
+% %                 
+% %             end
+% %             
+% %             %consider updating s1 and s2
+% %             if(min(s) < min_s)
+% %                 obj.s1 = min(s);
+% %             end
+% %             if(max(s) > max_s)
+% %                 obj.s2 = max(s);
+% %             end
+% %             
+% %             %update number of observations
+% %             obj.Nobs = obj.Nobs + n;
 %             
-%             %consider updating s1 and s2
-%             if(min(s) < min_s)
-%                 obj.s1 = min(s);
-%             end
-%             if(max(s) > max_s)
-%                 obj.s2 = max(s);
-%             end
-%             
-%             %update number of observations
-%             obj.Nobs = obj.Nobs + n;
-            
-        end
+%         end
         
         function obj = UpdateLineEstimateTLS(obj, x, sig2_x, y, sig2_y)
             %Line 2 gauss update performs an update of the line estimate
@@ -228,8 +228,12 @@ classdef GaussElement
             xhat = obj.mu_mb;
             min_s = obj.s1;
             max_s = obj.s2;
-            Phat = obj.P_xy;
+            Phat = obj.P_mb;
             n = length(y); %number of measurements
+            
+            %artificially inflate Phat
+            sf = .05;
+            Phat = Phat + sf*eye(2);
             
             %perform TLS to get measurements of m and b
             [y_m, y_b, R] = TLS(x, y, sig2_x, sig2_y);
@@ -470,6 +474,11 @@ classdef GaussElement
             %update the gaussians of each object
             obj1 = obj1.Line2GaussUpdate();
             obj2 = obj2.Line2GaussUpdate();
+            
+            %artificially increase the covariance
+            sf = 5;
+            obj1.P_mb = sf*obj1.P_mb;
+            obj2.P_mb = sf*obj2.P_mb;
             
             
         end
