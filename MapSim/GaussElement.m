@@ -100,7 +100,7 @@ classdef GaussElement
             var_t = P_st(2,2);
             
             %find the s values
-            k_unif = 0.5;
+            k_unif = 1.0;
             srange = sqrt(12*var_s/k_unif);
             avg_s = avg_x*sqrt(1+m_hat^2);
             min_s = avg_s - 0.5*srange;
@@ -163,6 +163,88 @@ classdef GaussElement
             %update number of observations
             obj.Nobs = obj.Nobs + n;
             
+        end
+        
+        function obj = UpdateGaussDirect(obj, x, P_x, y, P_y)
+            %directly updates the gaussian using a sigma point method
+            
+            %extract local variables
+            xhat = obj.mu_xy;
+            Phat = obj.P_xy;
+            n = length(y); %number of measurements
+            sig1 = sqrt(Phat(1,1));
+            sig2 = sqrt(Phat(2,2));
+            rho = Phat(1,2)/sig1/sig2; %correlation coefficient
+            Nmeas = obj.Nobs; %number of measurements already incorporated
+            
+            sig1_meas = sqrt(P_x);
+            sig2_meas = sqrt(P_y);
+            rho_meas = 0; %right now uncorrelated error in x and y measurment but this will change!
+            
+            %cycle through all measurements
+            for ii = 1:n
+                
+                %assemble this measurement as a gaussian
+                z = [x(ii), y(ii)]';
+                R_meas = zeros(2);
+                R_meas(1,1) = P_x;
+                R_meas(2,2) = P_y;
+                
+                %extract sigma points from measurement
+                [Xi,w] = GetSigPts(z, R_meas, 0.5);
+                
+%                 scatter(Xi(1,:),Xi(2,:))
+                
+                %initialize the updated sigma points
+                XiUpdate = zeros(2,5);
+                
+                % cycle through each sigma point and perform an update
+                for jj = 1:5
+                    
+                    %get the conditional distribution of the measurement
+                    %and gaussian conditioned at this sigma point
+                    mu_meas = z(2) + rho_meas*sig2_meas*((Xi(1,jj) - z(1))/sig1_meas);
+                    var_meas = (1 - rho_meas^2)*sig2_meas^2;
+                    
+                    mu_gauss = xhat(2) + rho*sig2*((Xi(1,jj) - xhat(1))/sig1);
+                    var_gauss = (1 - rho^2)*sig2^2;
+                    
+                    %update the sigma point based on the conditionals
+%                     XiUpdate(2,jj) = mu_gauss + var_gauss*(var_gauss + var_meas)*(mu_meas - mu_gauss);
+                    XiUpdate(2,jj) = mu_gauss + var_gauss*(var_gauss + var_meas)*(Xi(2,jj) - mu_gauss);
+                    XiUpdate(1,jj) = Xi(1,jj); %x-component not updated!
+                    
+                    
+                end
+                
+%                 scatter(XiUpdate(1,:),XiUpdate(2,:),'x')
+                
+                %find the sample mean and variance of the updated sigma
+                %points
+                mu_XiUpdate = mean(XiUpdate,2);
+                var_XiUpdate = zeros(2);
+                diff = XiUpdate - mu_XiUpdate;
+                for jj = 1:5
+                    var_XiUpdate = var_XiUpdate + w(jj)*diff(:,jj)*diff(:,jj)';
+                end
+                
+                %merge XiUpdate into xhat according to its relative weight
+                wXi = 1/(1+Nmeas);
+                wGauss = Nmeas/(1+Nmeas);
+                
+                xhat = wXi*mu_XiUpdate + wGauss*xhat;
+                Phat = wXi*(var_XiUpdate + mu_XiUpdate*mu_XiUpdate')...
+                    + wGauss*(Phat + xhat*xhat') - xhat*xhat';
+                
+                Nmeas = Nmeas + 1;
+                
+                
+            end
+            
+            %update the properties of the object
+            obj.mu_xy = xhat;
+            obj.P_xy = .05*eye(2) + Phat;
+               
         end
         
 %         function obj = UpdateLineEstimateUKF(obj, x, P_x, y, P_y)
@@ -421,7 +503,7 @@ classdef GaussElement
             x2 = obj.s2/sqrt(1+obj.mu_mb(1)^2);
             y1 = obj.mu_mb'*[x1; 1];
             y2 = obj.mu_mb'*[x2; 1];
-            plothandle = plot([x1 x2],[y1 y2],'--x',...
+            plothandle = plot(...%[x1 x2],[y1 y2],'--x',...
                 r_ellipse(:,1)+obj.mu_xy(1),r_ellipse(:,2)+obj.mu_xy(2),...
                 'LineWidth',2);
             text(x1,y1,string(idx))

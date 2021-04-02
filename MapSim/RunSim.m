@@ -24,17 +24,18 @@ slopemethod = "ML"; %maximum liklihood
 % slopemethod = "MMSE";
 
 %how long to stop and smell the flowers
-pauselength = 0;
+pauselength = 1;
 
 %maximum lenght of an element
 maxlength = 5;
 
 %threshold for merging two gaussians
-mergethresh = 1.25;
+mergethresh = 1.0;
 
 %estimator for line
 % estimator = 'KF';
-estimator = 'TLS';
+% estimator = 'TLS';
+estimator = 'CondMerge';
 
 %domain
 % x1 = -2;
@@ -221,18 +222,22 @@ for ii = 1:Nupdate
                 gauss_list{jj} = gauss_list{jj}.UpdateLineEstimateKF(...
                     x_meas(targs), sig2*eye(Ntargs),...
                     y_meas(targs), sig2*eye(Ntargs));
+                gauss_list{jj} = gauss_list{jj}.Line2GaussUpdate();
                 
             case 'TLS'
-                 gauss_list{jj} = gauss_list{jj}.UpdateLineEstimateTLS(...
+                gauss_list{jj} = gauss_list{jj}.UpdateLineEstimateTLS(...
                     x_meas(targs), sig2,...
                     y_meas(targs), sig2);
+                gauss_list{jj} = gauss_list{jj}.Line2GaussUpdate();
+                
+            case 'CondMerge'
+                gauss_list{jj} = gauss_list{jj}.UpdateGaussDirect(...
+                    x_meas(targs), sig2, y_meas(targs), sig2);
+                gauss_list{jj} = gauss_list{jj}.Gauss2LineUpdate();
                 
             otherwise
                 disp('Error: invalid estimator!')
         end
-        
-        %update gaussian estimate
-        gauss_list{jj} = gauss_list{jj}.Line2GaussUpdate();
         
         %check to see if we should split this gaussian
         if((gauss_list{jj}.s2 - gauss_list{jj}.s1) > maxlength)
@@ -364,7 +369,9 @@ for ii = 1:Nupdate
             %new object
             obj3 = GaussElement(N1 + N2);
             obj3.mu_xy = w1*obj1.mu_xy + w2*obj2.mu_xy;
-            obj3.P_xy = w1*obj1.P_xy + w2*obj2.P_xy;
+            obj3.P_xy = w1*(obj1.P_xy + obj1.mu_xy*obj1.mu_xy')...
+                + w2*(obj2.P_xy + obj2.mu_xy*obj2.mu_xy')...
+                -obj3.mu_xy*obj3.mu_xy';
             obj3 = obj3.Gauss2LineUpdate();
             
             %assign

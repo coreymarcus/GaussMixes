@@ -27,7 +27,8 @@ set(groot, 'defaultLegendInterpreter','latex');
 
 %estimator for line
 % estimator = 'KF';
-estimator = 'TLS';
+% estimator = 'TLS';
+estimator = 'CondMerge'; %conditional merging
 
 %how long to stop and smell the flowers
 pauselength = 1;
@@ -40,12 +41,12 @@ hold on
 plot(x1:.1:x2,TruthEval(x1:.1:x2,truthshape))
 
 %generate some initial points
-Nmeasinit = 3;
+Nmeasinit = 10;
 x_init = (x2 - x1)*rand(Nmeasinit,1) + x1;
 y_init = TruthEval(x_init,truthshape);
 
 %corrupt with noise
-sig2 = 0.05;
+sig2 = 0.10;
 x_meas = mvnrnd(x_init, sig2*eye(Nmeasinit))';
 y_meas = mvnrnd(y_init, sig2*eye(Nmeasinit))';
 
@@ -81,7 +82,7 @@ obj = obj.Line2GaussUpdate();
 
 
 % Update with new measurements
-Ndraw = 20;
+Ndraw = 10;
 Nupdate = 15;
 for ii = 1:Nupdate
     
@@ -113,17 +114,24 @@ for ii = 1:Nupdate
         case 'TLS'
             obj = obj.UpdateLineEstimateTLS(x_meas, sig2, y_meas, sig2);
             
+        case 'CondMerge'
+            obj = obj.UpdateGaussDirect(x_meas, sig2, y_meas, sig2);
+            
         otherwise
             disp('Error: invalid estimator')
     end
     
     %update gaussian estimate
-    obj = obj.Line2GaussUpdate();
+%     obj = obj.Line2GaussUpdate();
+    obj = obj.Gauss2LineUpdate();
     
     %plot
     plot_handle = obj.PlotElement(hand, 1);
     axis([-2.5 2.5 -1 6])
     pause(pauselength);
+    
+    disp(obj.mu_xy)
+    disp(obj.P_xy)
     
     %delete
     if(ii ~= Nupdate)
@@ -135,6 +143,3 @@ for ii = 1:Nupdate
     
     
 end
-
-obj.mu_mb
-obj.P_mb
