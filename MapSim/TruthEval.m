@@ -34,7 +34,7 @@ for ii = 1:n
             end
             
         case 'Line'
-            m = 1;
+            m = .5;
             b = 2;
             h(ii) = m*x(ii) + b;
             slope(ii) = m;

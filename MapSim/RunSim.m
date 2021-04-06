@@ -12,12 +12,12 @@ addpath("../../matlabScripts")
 
 %truth shape
 % truthshape = 'DoubleRamp';
-truthshape = 'Parabola';
-% truthshape = 'Rock';
+% truthshape = 'Parabola';
+truthshape = 'Rock';
 
 %how do we evaluate the GM at the end
-% GMevalmeth = 'gauss'; %uses the standard gaussian
-GMevalmeth = 'mixed'; %uses a mixed representation based on s and t
+GMevalmeth = 'gauss'; %uses the standard gaussian
+% GMevalmeth = 'mixed'; %uses a mixed representation based on s and t
 
 % how do we choose our slope estimate?
 slopemethod = "ML"; %maximum liklihood
@@ -27,7 +27,7 @@ slopemethod = "ML"; %maximum liklihood
 pauselength = 1;
 
 %maximum lenght of an element
-maxlength = 5;
+maxlength = 1;
 
 %threshold for merging two gaussians
 mergethresh = 1.0;

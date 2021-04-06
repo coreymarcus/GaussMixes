@@ -209,6 +209,8 @@ classdef GaussElement
                     mu_gauss = xhat(2) + rho*sig2*((Xi(1,jj) - xhat(1))/sig1);
                     var_gauss = (1 - rho^2)*sig2^2;
                     
+                    var_gauss = .1 + var_gauss;
+                    
                     %update the sigma point based on the conditionals
 %                     XiUpdate(2,jj) = mu_gauss + var_gauss*(var_gauss + var_meas)*(mu_meas - mu_gauss);
                     XiUpdate(2,jj) = mu_gauss + var_gauss*(var_gauss + var_meas)*(Xi(2,jj) - mu_gauss);
@@ -232,9 +234,10 @@ classdef GaussElement
                 wXi = 1/(1+Nmeas);
                 wGauss = Nmeas/(1+Nmeas);
                 
-                xhat = wXi*mu_XiUpdate + wGauss*xhat;
+                xhat_update = wXi*mu_XiUpdate + wGauss*xhat;
                 Phat = wXi*(var_XiUpdate + mu_XiUpdate*mu_XiUpdate')...
-                    + wGauss*(Phat + xhat*xhat') - xhat*xhat';
+                    + wGauss*(Phat + xhat*xhat') - xhat_update*xhat_update';
+                xhat = xhat_update;
                 
                 Nmeas = Nmeas + 1;
                 
@@ -243,7 +246,54 @@ classdef GaussElement
             
             %update the properties of the object
             obj.mu_xy = xhat;
-            obj.P_xy = .05*eye(2) + Phat;
+            obj.P_xy = .00*eye(2) + Phat;
+            obj.Nobs = Nmeas;
+               
+        end
+        
+        function obj = UpdateGaussNonLinLS(obj, x, P_x, y, P_y)
+            %directly updates the gaussian using a non-lin LS optimization
+            %scheme
+            
+            %extract local variables
+            xhat = obj.mu_xy;
+            Phat = obj.P_xy;
+            Nmeas = obj.Nobs;
+             
+            z = [x, y]';
+            R = zeros(2);
+            R(1,1) = P_x;
+            R(2,2) = P_y;
+            
+            %form function for optimization
+            fun = @(x) NewGaussCost(x,z,xhat,Phat, R, Nmeas);
+            
+            %form initial guess
+            x0 = zeros(5,1);
+            x0(1:2) = xhat;
+            x0(3) = Phat(1,1);
+            x0(4) = Phat(1,2);
+            x0(5) = Phat(2,2);
+            
+            %optimizer
+            options = optimoptions('lsqnonlin',...
+                'Algorithm','levenberg-marquardt','Display','off');
+            xfinal = lsqnonlin(fun,x0,[],[],options);
+            
+            fun(x0)
+            fun(xfinal)
+            
+            xhat_new = xfinal(1:2);
+            Phat_new = zeros(2);
+            Phat_new(1,1) = xfinal(3);
+            Phat_new(1,2) = xfinal(4);
+            Phat_new(2,1) = xfinal(4);
+            Phat_new(2,2) = xfinal(5);
+            
+            %update the properties of the object
+            obj.mu_xy = xhat_new;
+            obj.P_xy = Phat_new;
+            obj.Nobs = obj.Nobs + length(x);
                
         end
         

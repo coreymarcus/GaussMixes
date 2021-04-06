@@ -11,7 +11,8 @@ addpath("../sandbox/")
 addpath("../../matlabScripts")
 
 %truth shape
-truthshape = 'Line';
+% truthshape = 'Line';
+truthshape = 'Parabola';
 
 %domain
 x1 = -2;
@@ -28,7 +29,8 @@ set(groot, 'defaultLegendInterpreter','latex');
 %estimator for line
 % estimator = 'KF';
 % estimator = 'TLS';
-estimator = 'CondMerge'; %conditional merging
+% estimator = 'CondMerge'; %conditional merging
+estimator = 'NonLinLS'; %nonlin LS
 
 %how long to stop and smell the flowers
 pauselength = 1;
@@ -41,7 +43,7 @@ hold on
 plot(x1:.1:x2,TruthEval(x1:.1:x2,truthshape))
 
 %generate some initial points
-Nmeasinit = 10;
+Nmeasinit = 3;
 x_init = (x2 - x1)*rand(Nmeasinit,1) + x1;
 y_init = TruthEval(x_init,truthshape);
 
@@ -82,7 +84,7 @@ obj = obj.Line2GaussUpdate();
 
 
 % Update with new measurements
-Ndraw = 10;
+Ndraw = 3;
 Nupdate = 15;
 for ii = 1:Nupdate
     
@@ -117,6 +119,9 @@ for ii = 1:Nupdate
         case 'CondMerge'
             obj = obj.UpdateGaussDirect(x_meas, sig2, y_meas, sig2);
             
+        case 'NonLinLS'
+            obj = obj.UpdateGaussNonLinLS(x_meas, sig2, y_meas, sig2);
+            
         otherwise
             disp('Error: invalid estimator')
     end
@@ -130,8 +135,8 @@ for ii = 1:Nupdate
     axis([-2.5 2.5 -1 6])
     pause(pauselength);
     
-    disp(obj.mu_xy)
-    disp(obj.P_xy)
+%     disp(obj.mu_xy)
+    disp(eig(obj.P_xy))
     
     %delete
     if(ii ~= Nupdate)
