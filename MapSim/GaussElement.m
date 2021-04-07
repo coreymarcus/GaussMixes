@@ -271,24 +271,36 @@ classdef GaussElement
             %form initial guess
             x0 = zeros(5,1);
             x0(1:2) = xhat;
-            x0(3) = Phat(1,1);
-            x0(4) = Phat(1,2);
-            x0(5) = Phat(2,2);
+            [V, D] = eig(Phat);
+            x0(3) = D(1,1);
+            x0(4) = D(2,2);
+            x0(5) = V(2,1);
+            
+            %lower bounds on covariance elements
+            LB = [-Inf, -Inf, 0.01, 0.01, -Inf]';
             
             %optimizer
-            options = optimoptions('lsqnonlin',...
-                'Algorithm','levenberg-marquardt','Display','off');
-            xfinal = lsqnonlin(fun,x0,[],[],options);
+            %  options = optimoptions('lsqnonlin',...
+            %   'Algorithm','levenberg-marquardt','Display','off');
+            %  xfinal = lsqnonlin(fun,x0,LB,[],options);
+
+            
+            options = optimoptions('fmincon','Display','off');
+            xfinal = fmincon(fun,x0,[],[],[],[],LB,[],[],options);
             
             fun(x0)
             fun(xfinal)
             
             xhat_new = xfinal(1:2);
-            Phat_new = zeros(2);
-            Phat_new(1,1) = xfinal(3);
-            Phat_new(1,2) = xfinal(4);
-            Phat_new(2,1) = xfinal(4);
-            Phat_new(2,2) = xfinal(5);
+            D = zeros(2);
+            D(1,1) = xfinal(3);
+            D(2,2) = xfinal(4);
+            v1 = [1, xfinal(5)]';
+            v1 = v1/norm(v1);
+            v2 = [-xfinal(5), 1]';
+            v2 = v2/norm(v2);
+            V = [v1, v2];
+            Phat_new = V*D/V;
             
             %update the properties of the object
             obj.mu_xy = xhat_new;

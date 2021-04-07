@@ -12,8 +12,8 @@ addpath("../../matlabScripts")
 
 %truth shape
 % truthshape = 'DoubleRamp';
-% truthshape = 'Parabola';
-truthshape = 'Rock';
+truthshape = 'Parabola';
+% truthshape = 'Rock';
 
 %how do we evaluate the GM at the end
 GMevalmeth = 'gauss'; %uses the standard gaussian
@@ -27,15 +27,17 @@ slopemethod = "ML"; %maximum liklihood
 pauselength = 1;
 
 %maximum lenght of an element
-maxlength = 1;
+maxlength = 2;
 
 %threshold for merging two gaussians
-mergethresh = 1.0;
+mergethresh = 1.2;
 
 %estimator for line
 % estimator = 'KF';
 % estimator = 'TLS';
-estimator = 'CondMerge';
+% estimator = 'CondMerge';
+estimator = 'NonLinLS'; %nonlin LS
+
 
 %domain
 % x1 = -2;
@@ -232,6 +234,11 @@ for ii = 1:Nupdate
                 
             case 'CondMerge'
                 gauss_list{jj} = gauss_list{jj}.UpdateGaussDirect(...
+                    x_meas(targs), sig2, y_meas(targs), sig2);
+                gauss_list{jj} = gauss_list{jj}.Gauss2LineUpdate();
+                
+            case 'NonLinLS'
+                gauss_list{jj} = gauss_list{jj}.UpdateGaussNonLinLS(...
                     x_meas(targs), sig2, y_meas(targs), sig2);
                 gauss_list{jj} = gauss_list{jj}.Gauss2LineUpdate();
                 

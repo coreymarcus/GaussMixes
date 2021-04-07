@@ -3,11 +3,15 @@ function [J] = NewGaussCost(x,z,xhat_old,Phat_old, R, Nmeas_old)
 
 %locals
 xhat_new = x(1:2);
-Phat_new = zeros(2);
-Phat_new(1,1) = x(3);
-Phat_new(1,2) = x(4);
-Phat_new(2,1) = x(4);
-Phat_new(2,2) = x(5);
+D = zeros(2);
+D(1,1) = x(3);
+D(2,2) = x(4);
+v1 = [1, x(5)]';
+v1 = v1/norm(v1);
+v2 = [-x(5), 1]';
+v2 = v2/norm(v2);
+V = [v1, v2];
+Phat_new = V*D/V;
 m = size(z,2);
 
 %evaluate liklihood of measurements
@@ -19,7 +23,7 @@ end
 %evaluate cost of change in xhat and Phat
 xhat_diff = xhat_new - xhat_old;
 Phat_diff = reshape(Phat_new - Phat_old, 4, 1);
-J_gauss = Nmeas_old * ( xhat_diff'*xhat_diff + Phat_diff'*Phat_diff);
+J_gauss = 1*Nmeas_old * ( xhat_diff'*xhat_diff + Phat_diff'*Phat_diff);
 
 %total cost
 J = J_z + J_gauss;
