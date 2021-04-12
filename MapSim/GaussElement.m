@@ -376,7 +376,7 @@ classdef GaussElement
             n = length(y); %number of measurements
             
             %artificially inflate Phat
-            sf = .05;
+            sf = .0;
             Phat = Phat + sf*eye(2);
             
             %perform TLS to get measurements of m and b
@@ -565,7 +565,7 @@ classdef GaussElement
             x2 = obj.s2/sqrt(1+obj.mu_mb(1)^2);
             y1 = obj.mu_mb'*[x1; 1];
             y2 = obj.mu_mb'*[x2; 1];
-            plothandle = plot(...%[x1 x2],[y1 y2],'--x',...
+            plothandle = plot([x1 x2],[y1 y2],'--x',...
                 r_ellipse(:,1)+obj.mu_xy(1),r_ellipse(:,2)+obj.mu_xy(2),...
                 'LineWidth',2);
             text(x1,y1,string(idx))

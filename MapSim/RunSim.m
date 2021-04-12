@@ -1,6 +1,6 @@
 %Runs the mapping simulation
 clear
-close all
+% close all
 clc
 
 
@@ -27,10 +27,10 @@ slopemethod = "ML"; %maximum liklihood
 pauselength = 1;
 
 %maximum lenght of an element
-maxlength = 2;
+maxlength = 3;
 
 %threshold for merging two gaussians
-mergethresh = 1.2;
+mergethresh = 1.0;
 
 %estimator for line
 % estimator = 'KF';
@@ -132,7 +132,7 @@ end
 
 % Update with new measurements
 Ndraw = 50;
-Nupdate = 15;
+Nupdate = 5;
 for ii = 1:Nupdate
     
     %draw a new set of measurements

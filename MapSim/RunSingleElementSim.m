@@ -11,8 +11,8 @@ addpath("../sandbox/")
 addpath("../../matlabScripts")
 
 %truth shape
-% truthshape = 'Line';
-truthshape = 'Parabola';
+truthshape = 'Line';
+% truthshape = 'Parabola';
 
 %domain
 x1 = -2;
@@ -29,11 +29,11 @@ set(groot, 'defaultLegendInterpreter','latex');
 %estimator for line
 % estimator = 'KF';
 % estimator = 'TLS';
-% estimator = 'CondMerge'; %conditional merging
+% estimator = 'CondMerge'; %conditional merging (sigma points)
 estimator = 'NonLinLS'; %nonlin LS
 
 %how long to stop and smell the flowers
-pauselength = 1;
+pauselength = .2;
 
 %% Main
 
@@ -43,7 +43,7 @@ hold on
 plot(x1:.1:x2,TruthEval(x1:.1:x2,truthshape))
 
 %generate some initial points
-Nmeasinit = 3;
+Nmeasinit = 10;
 x_init = (x2 - x1)*rand(Nmeasinit,1) + x1;
 y_init = TruthEval(x_init,truthshape);
 
@@ -84,7 +84,7 @@ obj = obj.Line2GaussUpdate();
 
 
 % Update with new measurements
-Ndraw = 3;
+Ndraw = 5;
 Nupdate = 15;
 for ii = 1:Nupdate
     
@@ -112,31 +112,31 @@ for ii = 1:Nupdate
     switch estimator
         case 'KF'
             obj = obj.UpdateLineEstimateKF(x_meas, sig2*eye(Ndraw), y_meas, sig2*eye(Ndraw));
+            obj = obj.Line2GaussUpdate();
             
         case 'TLS'
             obj = obj.UpdateLineEstimateTLS(x_meas, sig2, y_meas, sig2);
+            obj = obj.Line2GaussUpdate();
             
         case 'CondMerge'
             obj = obj.UpdateGaussDirect(x_meas, sig2, y_meas, sig2);
+            obj = obj.Gauss2LineUpdate();
             
         case 'NonLinLS'
             obj = obj.UpdateGaussNonLinLS(x_meas, sig2, y_meas, sig2);
+            obj = obj.Gauss2LineUpdate();
             
         otherwise
             disp('Error: invalid estimator')
     end
-    
-    %update gaussian estimate
-%     obj = obj.Line2GaussUpdate();
-    obj = obj.Gauss2LineUpdate();
-    
+
     %plot
     plot_handle = obj.PlotElement(hand, 1);
     axis([-2.5 2.5 -1 6])
     pause(pauselength);
     
 %     disp(obj.mu_xy)
-    disp(eig(obj.P_xy))
+%     disp(eig(obj.P_xy))
     
     %delete
     if(ii ~= Nupdate)
