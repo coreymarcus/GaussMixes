@@ -28,9 +28,9 @@ set(groot, 'defaultLegendInterpreter','latex');
 
 %estimator for line
 % estimator = 'KF';
-% estimator = 'TLS';
+estimator = 'TLS';
 % estimator = 'CondMerge'; %conditional merging (sigma points)
-estimator = 'NonLinLS'; %nonlin LS
+% estimator = 'NonLinLS'; %nonlin LS
 
 %how long to stop and smell the flowers
 pauselength = .2;
