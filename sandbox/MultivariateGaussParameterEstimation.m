@@ -5,145 +5,99 @@ clc
 %% Setup
 
 %seed
-rng(4)
+rng(2)
 
-n = 10; %number of measurements with each cycle
-N_dist = 100000; %number of samples for checking distributions
-N_cycle = 100; %number of estimation cycles
+n_draw = 10; %number of measurements with each cycle
+N_cycle = 1000; %number of estimation cycles
 
 %true distribution
 p = 2;
 mu_true = [3; 2];
-var_true = .5*eye(p);
+Sig_true = .5*eye(p);
+Sig_true(1,2) = .25;
+Sig_true(2,1) = .25;
 
-%initial estimate of distribution
-P_mu0 = .4*eye(p);
-P_var0 = .1*eye(p*p);
-mu_hat0 = mvnrnd(mu_true,P_mu0);
-var_hat0 = mvnrnd(var_true,P_var0);
-
-%% Check distributions
-
-%initialize storage
-mu_meas = zeros(N_dist,1);
-var_meas = zeros(N_dist,1);
-
-for ii = 1:N_dist
-    
-    %grab samples of true distribution
-    y = mvnrnd(mu_true, var_true,n);
-    
-    %get measurements of mu and var
-    mu_meas(ii) = mean(y);
-    var_meas(ii) = sum((y - mean(y)).^2)/n; %MMSE
-%     var_meas(ii) = sum((y - mean(y)).^2)/(n-1); %unbiased
-%     var_meas(ii) = sum((y - mu_true).^2)/(n-1); %uncorrelated
-    
-end
+%measurement noise
+R = .1*Sig_true;
+% R = zeros(p);
 
 %% Estimation
 
+%draw some samples to get the initial estimate of the distribution
+m0 = 3;
+y = mvnrnd(mu_true, Sig_true + R, m0)';
+mu_hat0 = mean(y,2);
+Sig_hat0 = -1*R;
+for ii = 1:m0
+    Sig_hat0 = Sig_hat0 + (1/m0)*(y(:,ii) - mu_hat0)*(y(:,ii) - mu_hat0)';
+end
+n0 = 4;
+Psi0 = (n0-p-1)*Sig_hat0;
+
 %initialize storage
-mu_hat = zeros(N_cycle + 1,1);
-var_hat = zeros(N_cycle + 1, 1);
-P_mu = zeros(N_cycle + 1,1);
-P_var = zeros(N_cycle + 1, 1);
-n_meas = zeros(N_cycle + 1,1);
-nu_meas = zeros(N_cycle + 1,1);
-prodterm = zeros(N_cycle + 1,1);
-mu_hat(1) = mu_hat0;
-var_hat(1) = var_hat0;
-P_mu(1) = P_mu0;
-P_var(1) = P_var0;
-n_meas(1) = 1;
-nu_meas(1) = 1;
-prodterm(1) = nu_meas(1)*var_hat(1);
+mu_hat = zeros(p,N_cycle + 1);
+Sig_hat = zeros(p,p,N_cycle + 1);
+m = zeros(1,N_cycle + 1);
+Psi = zeros(p,p,N_cycle + 1);
+n = zeros(1, N_cycle + 1);
+
+mu_hat(:,1) = mu_hat0;
+Sig_hat(:,:,1) = Sig_hat0;
+m(1) = m0;
+n(1) = n0;
+Psi(:,:,1) = Psi0;
 
 for ii = 1:N_cycle
     
     %grab samples of true distribution
-    y = mvnrnd(mu_true, var_true,n);
-    
-    % My algorithm (definitely flawed)
-    %     %last cycle estimates
-    %     mu_bar = mu_hat(ii);
-    %     %     var_bar = var_hat(ii);
-    %     var_bar = var_true;
-    %     Pmu_bar = P_mu(ii);
-    %     alpha_bar = alpha_var(ii);
-    %     beta_bar = beta_var(ii);
-    %     
-    %     %update estimate of mu
-    %     R_mu = var_bar/n;
-    %     mu_hat(ii+1) = mu_bar + (Pmu_bar/(Pmu_bar + R_mu))*(mu_meas(ii) - mu_bar);
-    %     P_mu(ii+1) = Pmu_bar - Pmu_bar^2/(Pmu_bar + R_mu);
-    %     
-    %     %update estimate of var
-    %     alpha_meas = (n-1)/2;
-    % %     beta_meas = n/(2*var_bar); %MMSE
-    %     beta_meas = (n-1)/(2*var_bar); %unbiased
-    %     alpha_var(ii+1) = alpha_bar + alpha_meas;
-    %     beta_var(ii+1) = beta_bar + beta_meas/var_meas(ii);
-    %     var_hat(ii+1) = alpha_var(ii+1)/beta_var(ii+1);
-    %     P_var(ii+1) = alpha_var(ii+1)/beta_var(ii+1)^2;
+    y = mvnrnd(mu_true, Sig_true + R, n_draw)';
     
     % Wikipedia Algorithm
-    % (https://en.wikipedia.org/wiki/Normal_distribution#Estimation_of_parameters)
+    % (https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Statistical_inference)
     
-    %last cycle numbers
-    xbar = mean(y);
-    n0 = n_meas(ii);
-    nu0 = nu_meas(ii);
-    mu0 = mu_hat(ii);
-    prod0 = prodterm(ii);
+    %helpers
+    xbar = mean(y,2);
+    S = -R;
+    for jj = 1:n_draw
+        S = S + (1/n_draw)*(y(:,jj) - xbar)*(y(:,jj) - xbar)';
+    end
     
-    %update
-    mu_hat(ii+1) = (n0*mu0 + n*xbar)/(n0 + n);
-    n_meas(ii+1) = n0 + n;
-    nu_meas(ii+1) = nu0 + n;
-    prodterm(ii+1) = prod0 + sum((y - xbar).^2) + (n0*n)*(mu0 - xbar)^2/(n0 + n);
+    %update mean
+    mu_hat(:,ii+1) = (1/(n_draw + m(ii)))*(n_draw*xbar + m(ii)*mu_hat(:,ii));
+    m(ii+1) = n_draw + m(ii);
     
-    % human understandable estimates
-    P_mu(ii+1) = prodterm(ii+1)/(nu_meas(ii+1)*n_meas(ii+1));
-    var_hat(ii+1) = (0.5*prodterm(ii+1))/(0.5*nu_meas(ii+1) - 1);
-    P_var(ii+1) = (0.5*prodterm(ii+1))^2/( (0.5*nu_meas(ii+1) - 1)^2 * (0.5*nu_meas(ii+1) - 2));
+    %update covariance
+    Psi(:,:,ii+1) = Psi(:,:,ii) + n_draw*S + (n_draw*m(ii)/(n_draw + m(ii)))*(xbar - mu_hat(:,ii))*(xbar - mu_hat(:,ii))';
+    n(ii+1) = n(ii) + n_draw;
+    
+    %new estimate of covariance
+    Sig_hat(:,:,ii+1) = (1/(n(ii+1) - p - 1))*Psi(:,:,ii+1);
     
 end
 
 %% Plotting
 
-%sample what we expect from the distributions
-mu_sample = mvnrnd(mu_true, var_true/n, N_dist);
-var_sample = gamrnd((n-1)/2,(2*var_true)/n,N_dist,1); %MMSE
-% var_sample = gamrnd((n-1)/2,(2*var_true)/(n-1),N_dist,1); %unbiased
-
-Nbins = 100;
-
 figure
-histogram(mu_meas,Nbins,'Normalization','probability','DisplayStyle','stairs')
-title('Measurement of Mean')
+plot(mu_hat(1,:) - mu_true(1))
 hold on
-histogram(mu_sample,Nbins,'Normalization','probability','DisplayStyle','stairs')
-legend('Distribution of Measurements','Expected Distribution of Measurements')
+plot(mu_hat(2,:) - mu_true(2))
+grid on
 
 figure
-histogram(var_meas,Nbins,'Normalization','probability','DisplayStyle','stairs')
-title('Measurement of Var')
-hold on
-histogram(var_sample,Nbins,'Normalization','probability','DisplayStyle','stairs')
-legend('Distribution of Measurements','Expected Distribution of Measurements')
+subplot(2,2,1)
+plot(squeeze(Sig_hat(1,1,:) - Sig_true(1,1)))
+grid on
+
+subplot(2,2,2)
+plot(squeeze(Sig_hat(1,2,:) - Sig_true(1,2)))
+grid on
+
+subplot(2,2,3)
+plot(squeeze(Sig_hat(2,1,:) - Sig_true(2,1)))
+grid on
+
+subplot(2,2,4)
+plot(squeeze(Sig_hat(2,2,:) - Sig_true(2,2)))
+grid on
 
 
-figure
-subplot(2,1,1)
-plot(mu_hat - mu_true)
-
-subplot(2,1,2)
-plot(var_hat - var_true)
-
-figure
-subplot(2,1,1)
-plot(P_mu)
-
-subplot(2,1,2)
-plot(P_var)

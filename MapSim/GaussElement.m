@@ -9,6 +9,11 @@ classdef GaussElement
         s1 %lower bound on line segment
         s2 %upper bound on line segment
         Nobs %number of observations
+        
+        %properties for direct distribution estimation
+        Psi %Parameter matrix for inverse wishart distribution
+        n_dof %DoF for inverse wishart distribution
+        
     end
     
     methods
@@ -249,6 +254,51 @@ classdef GaussElement
             obj.P_xy = .00*eye(2) + Phat;
             obj.Nobs = Nmeas;
                
+        end
+        
+        function obj = UpdateGaussBayes(obj, y, R)
+            %uses bayesian inference to update the distribution
+            
+            %extract locals
+            Psi0 = obj.Psi;
+            m0 = obj.Nobs;
+            n0 = obj.n_dof;
+            mu0 = obj.mu_xy;
+            n_draw = size(y,2);
+            p = 2;
+            min_s = obj.s1;
+            max_s = obj.s2;
+            
+            %helpers
+            xbar = mean(y,2);
+            S = -R;
+            for jj = 1:n_draw
+                S = S + (1/n_draw)*(y(:,jj) - xbar)*(y(:,jj) - xbar)';
+            end
+            
+            %update mean
+            obj.mu_xy = (1/(n_draw + m0))*(n_draw*xbar + m0*mu0);
+            obj.Nobs = n_draw + m0;
+            
+            %update covariance
+            obj.Psi = Psi0 + n_draw*S + (n_draw*m0/(n_draw + m0))*(xbar - mu0)*(xbar - mu0)';
+            obj.n_dof = n0 + n_draw;
+            
+            %new estimates of covariance
+            obj.P_xy = (1/(obj.n_dof - p - 1))*obj.Psi;
+            
+            %for all measurements, calculate the s value
+            s = obj.CalcTransDist(y(1,:), y(2,:));
+            
+            %consider updating s1 and s2
+            if(min(s) < min_s)
+                obj.s1 = min(s);
+            end
+            if(max(s) > max_s)
+                obj.s2 = max(s);
+            end
+            
+            
         end
         
         function obj = UpdateGaussNonLinLS(obj, x, P_x, y, P_y)

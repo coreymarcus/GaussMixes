@@ -24,7 +24,7 @@ slopemethod = "ML"; %maximum liklihood
 % slopemethod = "MMSE";
 
 %how long to stop and smell the flowers
-pauselength = 1;
+pauselength = 0;
 
 %maximum lenght of an element
 maxlength = 3;
@@ -36,7 +36,8 @@ mergethresh = 1.0;
 % estimator = 'KF';
 % estimator = 'TLS';
 % estimator = 'CondMerge';
-estimator = 'NonLinLS'; %nonlin LS
+% estimator = 'NonLinLS'; %nonlin LS
+estimator = 'Direct'; %direct estimation of the gaussian
 
 
 %domain
@@ -121,6 +122,10 @@ for ii = 1:Ngauss
     
     %create gaussians
     obj = obj.Line2GaussUpdate();
+    
+    %initialize parameters for bayesian inference
+    obj.n_dof = 4;
+    obj.Psi = (obj.n_dof - 2  - 1)*obj.P_xy;
     
     %plot
     gauss_plot_handle{ii} = obj.PlotElement(hand, ii);
@@ -242,6 +247,12 @@ for ii = 1:Nupdate
                     x_meas(targs), sig2, y_meas(targs), sig2);
                 gauss_list{jj} = gauss_list{jj}.Gauss2LineUpdate();
                 
+            case 'Direct'
+                z = [x_meas(targs)'; y_meas(targs)'];
+                R = sig2*eye(2);
+                gauss_list{jj} = gauss_list{jj}.UpdateGaussBayes(z,R);
+                gauss_list{jj} = gauss_list{jj}.Gauss2LineUpdate();
+                
             otherwise
                 disp('Error: invalid estimator!')
         end
@@ -312,6 +323,10 @@ for ii = 1:Nupdate
                 obj.Nobs = sum(targidx);
                 obj = obj.Gauss2LineUpdate();
                 
+                %initialize parameters for bayesian inference
+                obj.n_dof = 4;
+                obj.Psi = (obj.n_dof - 2 - 1)*obj.P_xy;
+                
                 % add
                 gauss_list{end+1} = obj;
                 gauss_plot_handle{end+1} = gauss_list{end}.PlotElement(hand,0);
@@ -380,6 +395,10 @@ for ii = 1:Nupdate
                 + w2*(obj2.P_xy + obj2.mu_xy*obj2.mu_xy')...
                 -obj3.mu_xy*obj3.mu_xy';
             obj3 = obj3.Gauss2LineUpdate();
+            
+            %initialize parameters for bayesian inference
+            obj3.n_dof = 4;
+            obj3.Psi = (obj3.n_dof - 2  - 1)*obj3.P_xy;
             
             %assign
             gauss_list{minidx} = obj3;

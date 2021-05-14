@@ -28,9 +28,10 @@ set(groot, 'defaultLegendInterpreter','latex');
 
 %estimator for line
 % estimator = 'KF';
-estimator = 'TLS';
+% estimator = 'TLS';
 % estimator = 'CondMerge'; %conditional merging (sigma points)
 % estimator = 'NonLinLS'; %nonlin LS
+estimator = 'Direct'; %direct estimation of the gaussian
 
 %how long to stop and smell the flowers
 pauselength = .2;
@@ -79,12 +80,16 @@ obj.s2 = max(s_meas);
 %create gaussians
 obj = obj.Line2GaussUpdate();
 
+%initialize parameters for bayesian inference
+obj.n_dof = 4;
+obj.Psi = (obj.n_dof - 2  - 1)*obj.P_xy;
+
 %plot
 % plot_handle = obj.PlotElement(hand, 1);
 
 
 % Update with new measurements
-Ndraw = 5;
+Ndraw = 10;
 Nupdate = 15;
 for ii = 1:Nupdate
     
@@ -126,6 +131,12 @@ for ii = 1:Nupdate
             obj = obj.UpdateGaussNonLinLS(x_meas, sig2, y_meas, sig2);
             obj = obj.Gauss2LineUpdate();
             
+        case 'Direct'
+            z = [x_meas'; y_meas'];
+            R = sig2*eye(2);
+            obj = obj.UpdateGaussBayes(z, R);
+            obj = obj.Gauss2LineUpdate();
+            
         otherwise
             disp('Error: invalid estimator')
     end
@@ -148,3 +159,5 @@ for ii = 1:Nupdate
     
     
 end
+
+title(estimator)
