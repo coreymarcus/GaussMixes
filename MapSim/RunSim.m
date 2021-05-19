@@ -1,6 +1,6 @@
 %Runs the mapping simulation
 clear
-% close all
+close all
 clc
 
 
@@ -11,7 +11,7 @@ addpath("../sandbox/")
 addpath("../../matlabScripts")
 
 %truth shape
-% truthshape = 'DoubleRamp';
+% truthshape = 'DoubleRamp'; 
 truthshape = 'Parabola';
 % truthshape = 'Rock';
 
@@ -27,10 +27,10 @@ slopemethod = "ML"; %maximum liklihood
 pauselength = 0;
 
 %maximum lenght of an element
-maxlength = 3;
+maxlength = 1;
 
 %threshold for merging two gaussians
-mergethresh = 1.0;
+mergethresh = 0.25;
 
 %estimator for line
 % estimator = 'KF';
@@ -51,6 +51,11 @@ Ndem = 10; %number of DEM bins
 %seed
 rng(3);
 
+%measurement noise covariance
+sig2 = 0.25;
+% sig2 = 0.01;
+% sig2 = 0;
+
 %latex
 set(0,'defaulttextInterpreter','latex');
 set(groot, 'defaultAxesTickLabelInterpreter','latex');
@@ -65,7 +70,6 @@ x_init = (x2 - x1)*rand(Nmeasinit,1) + x1;
 y_init = TruthEval(x_init,truthshape);
 
 %corrupt with noise
-sig2 = 0.25;
 x_meas = mvnrnd(x_init, sig2*eye(Nmeasinit))';
 y_meas = mvnrnd(y_init, sig2*eye(Nmeasinit))';
 

@@ -23,6 +23,11 @@ for ii = 1:n
             
             h(ii) = 0.05*x(ii)^2;
             slope(ii) = 0.10*x(ii);
+        
+        case 'GentleParabola'
+            a = 1E-4;
+            h(ii) = a*x(ii)^2;
+            slope(ii) = 2*a*x(ii);
             
         case 'Rock'
             if(abs(x(ii)) > 0.5)

@@ -7,8 +7,8 @@ clc
 %seed
 rng(2)
 
-n_draw = 10; %number of measurements with each cycle
-N_cycle = 1000; %number of estimation cycles
+n_draw = 100; %number of measurements with each cycle
+N_cycle = 100; %number of estimation cycles
 
 %true distribution
 p = 2;
@@ -20,6 +20,12 @@ Sig_true(2,1) = .25;
 %measurement noise
 R = .1*Sig_true;
 % R = zeros(p);
+
+%latex
+set(0,'defaulttextInterpreter','latex');
+set(groot, 'defaultAxesTickLabelInterpreter','latex');
+set(groot, 'defaultLegendInterpreter','latex');
+
 
 %% Estimation
 
@@ -82,22 +88,31 @@ plot(mu_hat(1,:) - mu_true(1))
 hold on
 plot(mu_hat(2,:) - mu_true(2))
 grid on
+title('Error in $\hat{\mu}$')
+legend('$\mu (1)$','$\mu (2)$')
+xlabel('Cycle with 100 observations')
 
 figure
 subplot(2,2,1)
 plot(squeeze(Sig_hat(1,1,:) - Sig_true(1,1)))
 grid on
+title('Err in $P(1,1)$')
 
 subplot(2,2,2)
 plot(squeeze(Sig_hat(1,2,:) - Sig_true(1,2)))
 grid on
+title('Err in $P(1,2)$')
 
 subplot(2,2,3)
 plot(squeeze(Sig_hat(2,1,:) - Sig_true(2,1)))
 grid on
+xlabel('Cycle with 100 observations')
+title('Err in $P(2,1)$')
 
 subplot(2,2,4)
 plot(squeeze(Sig_hat(2,2,:) - Sig_true(2,2)))
 grid on
+xlabel('Cycle with 100 observations')
+title('Err in $P(2,2)$')
 
 

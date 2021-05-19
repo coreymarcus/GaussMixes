@@ -271,7 +271,8 @@ classdef GaussElement
             
             %helpers
             xbar = mean(y,2);
-            S = -R;
+%             S = -R;
+            S = zeros(2);
             for jj = 1:n_draw
                 S = S + (1/n_draw)*(y(:,jj) - xbar)*(y(:,jj) - xbar)';
             end
@@ -286,6 +287,10 @@ classdef GaussElement
             
             %new estimates of covariance
             obj.P_xy = (1/(obj.n_dof - p - 1))*obj.Psi;
+            
+            if(min(eig(obj.P_xy)) <= 0)
+                disp("Warning: Degenerate P_xy")
+            end
             
             %for all measurements, calculate the s value
             s = obj.CalcTransDist(y(1,:), y(2,:));
@@ -565,7 +570,7 @@ classdef GaussElement
             hold on
             
             %sigma value for ellipse
-            sigma = 1;
+            sigma = 3;
             
             % Calculate the eigenvectors and eigenvalues
             [eigenvec, eigenval ] = eig(obj.P_xy);
@@ -599,6 +604,10 @@ classdef GaussElement
             %create semi-major and minor axes
             a=sigma*sqrt(largest_eigenval);
             b=sigma*sqrt(smallest_eigenval);
+            
+            if(a == 0 || b == 0)
+                disp("Warning: Degenerate Covaraince Matrix")
+            end
             
             % the ellipse in x and y coordinates
             ellipse_x_r  = a*cos( theta );
