@@ -8,6 +8,7 @@ classdef GaussElement
         P_mb %line variance
         s1 %lower bound on line segment
         s2 %upper bound on line segment
+        k_unif = 0.75; %hueristic for scaling uniform variance
         Nobs %number of observations
         
         %properties for direct distribution estimation
@@ -44,8 +45,7 @@ classdef GaussElement
             var_t = [pt_pm, pt_pb]*P*[pt_pm; pt_pb];
             
             %approximate the variance in the s direction
-            k_unif = 1; %hueristic for scaling uniform variance
-            var_s = k_unif*(1/12)*(max_s - min_s)^2;
+            var_s = obj.k_unif*(1/12)*(max_s - min_s)^2;
             
             %now, rotate covariance into the cartesian frame
             P_st = [var_s, 0;
@@ -136,6 +136,20 @@ classdef GaussElement
             max_s = obj.s2;
             Phat = obj.P_mb;
             n = length(y); %number of measurements
+            
+            % Ensure measurement vectors are columns
+            if(size(x,2) > 1)
+                x = x';
+                if(size(x,2) > 1)
+                    disp('Warning: non-column x')
+                end
+            end
+            if(size(y,2) > 1)
+                y = y';         
+                if(size(y,2) > 1)
+                    disp('Warning: non-column y')
+                end
+            end
             
             %create H
             H = ones(n,2);
@@ -563,14 +577,14 @@ classdef GaussElement
             
         end
         
-        function plothandle = PlotElement(obj, handle, idx)
+        function plothandle = PlotElement(obj, handle, idx, sigma)
             
             %switch to the current figure
             figure(handle)
             hold on
             
             %sigma value for ellipse
-            sigma = 3;
+%             sigma = 3;
             
             % Calculate the eigenvectors and eigenvalues
             [eigenvec, eigenval ] = eig(obj.P_xy);

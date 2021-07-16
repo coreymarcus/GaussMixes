@@ -1,4 +1,4 @@
-function fitidx = BinMeasurements(meas,gauss_list,R)
+function fitidx = BinMeasurements(meas,gauss_list,R, bindist)
 %BinMeasurements determines which element each measurement belongs to
 
 %locals
@@ -17,7 +17,7 @@ for jj = 1:Ndraw
     
     %determine which one is the best fit
     [minval, minidx] = min(sigdist(jj,:));
-    if(minval < 3)
+    if(minval < bindist)
         fitidx(jj) = minidx(1);
     end
 end

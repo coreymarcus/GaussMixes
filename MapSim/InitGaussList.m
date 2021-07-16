@@ -56,7 +56,7 @@ for ii = 1:N_comp
     obj.Psi = (obj.n_dof - 2  - 1)*obj.P_xy;
     
     %plot
-    gauss_plot_handle{ii} = obj.PlotElement(gcf, ii);
+    gauss_plot_handle{ii} = obj.PlotElement(gcf, ii, 3);
     
     %list
     gauss_list{ii} = obj;

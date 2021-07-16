@@ -9,9 +9,14 @@ clc
 addpath("../sandbox/")
 addpath("../../matlabScripts")
 
+%how do we evaluate the GM at the end?
+GMevalmeth = 'gauss'; %uses the standard gaussian
+% GMevalmeth = 'mixed'; %uses a mixed representation based on s and t
+
 %time parameters
 t_sim = 59;
 t_step = 1;
+pause_length = 1; % time to pause and look at plots for
 
 %trajectory
 traj = 'Ramp'; %straight ramp descent
@@ -32,17 +37,23 @@ N_meas_cycle = 50;
 FOV = pi/6;
 R_cycle = eye(2);
 
+%gaussian parameters
+maxlength = 50;
+mergethreshold = 0.1;
+bindist = 2;
+plotsigma = 2*sqrt(mergethreshold);
+
 %estimator to use
-% estimator = 'KF';
+estimator = 'KF';
 % estimator = 'TLS';
 % estimator = 'CondMerge';
 % estimator = 'NonLinLS'; %nonlin LS
-estimator = 'Direct'; %direct estimation of the gaussian
+% estimator = 'Direct'; %direct estimation of the gaussian
 
 %% Main
 
-%create a figure for use later
-hand = figure;
+%figure for plotting
+main_fig = figure;
 
 %draw initial measurements
 x1 = -400;
@@ -59,6 +70,10 @@ y_meas = mvnrnd(y_init, R_init(2,2)*eye(N_meas_init))';
 for jj = 1:N_gauss_init
     delete(gauss_plot_handle{jj})
 end
+
+%sample truth
+truth_samp = [x1:.1:x2;
+    TruthEval(x1:.1:x2,terrain)];
 
 %time vector
 t = 0:t_step:t_sim;
@@ -93,13 +108,31 @@ for ii = 1:N_t
     end
     
     %bin the measurements
-    fitidx = BinMeasurements(meas_iter,gauss_list,R_cycle);
+    fitidx = BinMeasurements(meas_iter,gauss_list,R_cycle, bindist);
     
     %build list of unused measurements
     unused_meas = [unused_meas, meas_iter(:,fitidx == 0)];
     
+    %look for potential new gaussians
+    [gauss_list, unused_meas] = FindNewGaussians(gauss_list, unused_meas, ...
+        40, maxlength);
+    
     %update the list
-    gauss_list = UpdateGaussList(gauss_list, meas_iter, R_cycle, fitidx, estimator);
+    gauss_list = UpdateGaussList(gauss_list, meas_iter, R_cycle, fitidx, ...
+        estimator, maxlength);
+    
+    % plot
+    gauss_plot_handle = PlotGaussList(main_fig, gauss_list, meas_iter, fitidx, truth_samp, ...
+        x_iter, FOV, plotsigma);
+    
+    %consider merging
+    gauss_list = MergeGaussList(gauss_list, mergethreshold);
+    
+    % plot
+    gauss_plot_handle = PlotGaussList(main_fig, gauss_list, meas_iter, fitidx, truth_samp, ...
+        x_iter, FOV, plotsigma);
+    
+    pause(pause_length)
     
     %store
     x(:,ii) = x_iter;
@@ -107,34 +140,47 @@ for ii = 1:N_t
     
 end
 
-% evaluate the true terrian
-x_eval = -600:10:600;
-h_eval = TruthEval(x_eval,terrain);
-
 %% Plotting
 
-figure(hand)
+figure
 plot(x(1,:),x(2,:),'*')
 axis equal
 hold on
-plot(x_eval,h_eval)
+plot(truth_samp(1,:),truth_samp(2,:))
 % scatter(meas(1,:),meas(2,:))
 delete(findall(gcf,'type','text')) %delete all exisiting text
 for jj = 1:length(gauss_list)
     delete(gauss_plot_handle{jj})
     
-%     gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(hand, jj);
+    % gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(hand, jj);
 end
 xlabel('x')
 ylabel('y')
 legend('Vehicle Trajectory','Terrain')
 
-% figure
-% subplot(2,1,1)
-% plot(t,x(1,:))
-%
-% subplot(2,1,2)
-% plot(t,x(2,:))
+%plot the final results
+pdf_plot = figure;
+[~, xmax, yargmax, maxGM] = PlotGM(pdf_plot,gauss_list,x1,x2,-20,40,.1,GMevalmeth);
+plot3(truth_samp(1,:),truth_samp(2,:),maxGM*ones(size(truth_samp,2),1),'k','LineWidth',2)
+plot3(xmax, yargmax,maxGM*ones(length(xmax),1),'r','LineWidth',2)
+xlabel('x')
+ylabel('y')
+legend('PDF','True Surface','Estimated Surface')
+title('PDF From GM')
+
+%plot
+final_plot = figure;
+for jj = 1:length(gauss_list)
+    gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(final_plot, jj);
+end
+plot(x1:1:x2,TruthEval(x1:1:x2,terrain))
+
+figure
+subplot(2,1,1)
+plot(t,x(1,:))
+
+subplot(2,1,2)
+plot(t,x(2,:))
 
 
 
