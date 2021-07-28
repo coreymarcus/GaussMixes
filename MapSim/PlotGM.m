@@ -3,8 +3,8 @@ function [plot_handle, xrange, argmax_y, pdfmax] = PlotGM(fig_handle, gauss_list
 
 %get locals
 Ngauss = length(gauss_list);
-xrange = x1:d:x2;
-yrange = y1:d:y2;
+xrange = x1:1:x2;
+yrange = y1:.05:y2;
 Nx = length(xrange);
 Ny = length(yrange);
 eval_grid = zeros(Ny,Nx);

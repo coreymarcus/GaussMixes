@@ -1,10 +1,11 @@
-function gauss_list = UpdateGaussList(gauss_list, meas, R, fitidx, estimator)
+function gauss_list = UpdateGaussList(gauss_list, meas, R, fitidx, estimator, maxlength)
 %UpdateGaussList updates components based on chosen algo
 
 %locals
 Ngauss = length(gauss_list);
 x_meas = meas(1,:);
 y_meas = meas(2,:);
+gauss_list_new = cell(0);
 
 %perform the updates for each gaussian
 for jj = 1:Ngauss
@@ -51,6 +52,15 @@ for jj = 1:Ngauss
             disp('Error: invalid estimator!')
     end
     
+    %check to see if we should split this gaussian
+    if((gauss_list{jj}.s2 - gauss_list{jj}.s1) > maxlength)
+        [gauss_list{jj}, gauss_list_new{end+1}] = gauss_list{jj}.SplitElement();
+    end
+    
 end
+
+%update list of gaussian
+gauss_list = [gauss_list, gauss_list_new];
+
 end
 
