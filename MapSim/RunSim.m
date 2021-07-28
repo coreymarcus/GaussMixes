@@ -20,8 +20,8 @@ GMevalmeth = 'gauss'; %uses the standard gaussian
 % GMevalmeth = 'mixed'; %uses a mixed representation based on s and t
 
 % how do we choose our slope estimate?
-slopemethod = "ML"; %maximum liklihood
-% slopemethod = "MMSE";
+% slopemethod = "ML"; %maximum liklihood
+slopemethod = "MMSE";
 
 %how long to stop and smell the flowers
 pauselength = 0;
@@ -30,14 +30,14 @@ pauselength = 0;
 maxlength = 1;
 
 %threshold for merging two gaussians
-mergethresh = 0.25;
+mergethresh = .5;
 
 %estimator for line
-% estimator = 'KF';
+estimator = 'KF';
 % estimator = 'TLS';
 % estimator = 'CondMerge';
 % estimator = 'NonLinLS'; %nonlin LS
-estimator = 'Direct'; %direct estimation of the gaussian
+% estimator = 'Direct'; %direct estimation of the gaussian
 
 
 %domain
