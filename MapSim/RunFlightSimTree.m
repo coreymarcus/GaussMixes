@@ -135,14 +135,14 @@ final_fig = figure;
 plot(truth_samp(1,:),truth_samp(2,:),'k','LineWidth',2)
 hold on
 tree.PlotTree(final_fig,false);
-plot(xmaxDEM, yargmaxDEM, '--r', 'LineWidth',2)
+plot(xmaxDEM, yargmaxDEM, 'r', 'LineWidth',1)
 % plot(x(1,:),x(2,:),'--r','LineWidth',1.5)
 
 final_fig2 = figure;
 plot(truth_samp(1,:),truth_samp(2,:),'k','LineWidth',2)
 hold on
 tree.PlotTree(final_fig2,true);
-plot(xmaxDEM, yargmaxDEM, '--r', 'LineWidth',2)
+plot(xmaxDEM, yargmaxDEM, 'r', 'LineWidth',1)
 % plot(x(1,:),x(2,:),'--r','LineWidth',1.5)
 
 

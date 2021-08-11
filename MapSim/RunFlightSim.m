@@ -16,7 +16,7 @@ GMevalmeth = 'gauss'; %uses the standard gaussian
 %time parameters
 t_sim = 59;
 t_step = 1;
-pause_length = 1; % time to pause and look at plots for
+pause_length = 0; % time to pause and look at plots for
 
 %trajectory
 traj = 'Ramp'; %straight ramp descent
@@ -39,7 +39,7 @@ R_cycle = eye(2);
 
 %gaussian parameters
 maxlength = 50;
-mergethreshold = 0.1;
+mergethreshold = 0.01;
 bindist = 2;
 plotsigma = 2*sqrt(mergethreshold);
 
@@ -171,7 +171,7 @@ title('PDF From GM')
 %plot
 final_plot = figure;
 for jj = 1:length(gauss_list)
-    gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(final_plot, jj);
+    gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(final_plot, jj, plotsigma);
 end
 plot(x1:1:x2,TruthEval(x1:1:x2,terrain))
 
