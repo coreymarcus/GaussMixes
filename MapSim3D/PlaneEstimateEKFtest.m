@@ -2,9 +2,6 @@ clear
 close all
 clc
 
-% Add path for EKF
-addpath('../../matlabScripts')
-
 % Create the truth plane
 nhat_true = [.1 .1 1]';
 nhat_true = nhat_true/norm(nhat_true);
@@ -52,7 +49,7 @@ end
 [xhat0, Phat0] = PlaneEstimateML(rinit,Pinit);
 
 % Initialize recursive estimate
-Nupdate = 500;
+Nupdate = 5000;
 xhat = [xhat0 zeros(4,Nupdate)];
 Phat = zeros(3,3,Nupdate);
 Phat(:,:,1) = Phat0;
@@ -82,11 +79,16 @@ for ii = 1:Nupdate
     r_exp = m0_iter + t_exp*bhat_iter;
     
     % Skip if t_exp too big
-    if(abs(t_exp) > 100)
+    theta = acos(nhat'*bhat_iter)*180/pi;
+    %if(abs(t_exp) > 100)
+    if(theta < 110 || t_exp <= 0)
         xhat(1:3,ii+1) = nhat;
         xhat(4,ii+1) = dhat;
         Phat(:,:,ii+1) = Phat(:,:,ii);
         nSkipped = nSkipped + 1;
+        disp(theta)
+        disp(t_exp)
+        disp(' ')
         continue;
     end
     

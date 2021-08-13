@@ -6,8 +6,8 @@ clc
 
 nMC = 1000;
 
-nMeas = 100;
-Rmeas = eye(3);
+nMeas = 4;
+Rmeas = .001*eye(3);
 plane_truth = [0 0 1 1]';
 plane_truth(1:3) = plane_truth(1:3)/norm(plane_truth(1:3));
 
@@ -53,9 +53,3 @@ end
 eMean = mean(e_mat,2)
 eCov = cov(e_mat')
 predCov = mean(cov_mat,3)
-
-%% Plot
-
-figure
-scatter3(xtrue,ytrue,ztrue)
-axis equal

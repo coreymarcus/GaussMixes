@@ -1,8 +1,8 @@
-function [plane_hat, cov] = PlaneEstimateML(r_mat,cov_r_mat)
+function [plane_hat, cov] = PlaneEstimateML(rmat,Rmat)
 %PlaneEstimateML
 
 % locals
-npts = size(r_mat,2);
+npts = size(rmat,2);
 % cov_eta_mat = zeros(npts,1);
 % A = zeros(npts,1);
 % D = zeros(3,npts);
@@ -32,9 +32,9 @@ for ii = 1:max_iters
     b = zeros(3,1);
     H = zeros(3,3);
     for jj = 1:npts
-        cov_eta = nhat'*cov_r_mat(:,:,jj)*nhat;
-        A = r_mat(:,jj)'*nhat - d;
-        D = [-r_mat(:,jj)'*nhatplus*J, 1];
+        cov_eta = nhat'*Rmat(:,:,jj)*nhat;
+        A = rmat(:,jj)'*nhat - d;
+        D = [-rmat(:,jj)'*nhatplus*J, 1];
         b = b + D'*A/cov_eta;
         H = H + D'*D/cov_eta;
     end
