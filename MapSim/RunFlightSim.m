@@ -173,7 +173,7 @@ title('PDF From GM')
 %plot
 final_plot = figure;
 for jj = 1:length(gauss_list)
-    gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(final_plot, jj);
+    gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(final_plot, jj, plotsigma);
 end
 plot(x1:1:x2,TruthEval(x1:1:x2,terrain))
 

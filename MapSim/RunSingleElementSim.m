@@ -28,10 +28,10 @@ set(groot, 'defaultLegendInterpreter','latex');
 
 %estimator for line
 % estimator = 'KF';
-% estimator = 'TLS';
+estimator = 'TLS';
 % estimator = 'CondMerge'; %conditional merging (sigma points)
 % estimator = 'NonLinLS'; %nonlin LS
-estimator = 'Direct'; %direct estimation of the gaussian
+% estimator = 'Direct'; %direct estimation of the gaussian
 
 %how long to stop and smell the flowers
 pauselength = .2;
