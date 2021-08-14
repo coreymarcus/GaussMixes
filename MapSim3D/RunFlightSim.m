@@ -17,7 +17,8 @@ pause_length = 0; % time to pause and look at plots for
 traj = 'Ramp'; %straight ramp descent
 
 % true terrain
-terrain = 'GentleParabola';
+% terrain = 'GentleParabola';
+terrain = 'FlatBottomParabola';
 
 % measurement model
 meas_model = 'Simple';

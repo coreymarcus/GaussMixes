@@ -46,6 +46,17 @@ for ii = 1:nx
                 %             h(ii) = m*r(ii) + b;
                 %             slope(ii) = m;
                 
+            case 'FlatBottomParabola'
+                a = 1E-4;
+                r = 50; % radius of flat bottom
+                
+                rad = x(ii)^2 + y(jj)^2;
+                if(rad < r)
+                    h(jj,ii) = 0;
+                else
+                    h(jj,ii) = a*(rad - r);
+                end
+                
             otherwise
                 disp("Error: Invalid Truth Shape!")
                 return

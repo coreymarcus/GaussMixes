@@ -13,10 +13,13 @@ Ptruth = .1*eye(3);
 %seed
 rng(1)
 
+% Number of EKF updates
+Nupdate = 100;
+
 % Monte carlo parameters
 Nmc = 1000;
-err_mc = zeros(3,Nmc);
-Phat_mc = zeros(3,3,Nmc);
+err_mc = zeros(3,Nupdate+1,Nmc);
+Phat_mc = zeros(3,3,Nupdate+1,Nmc);
 
 % Start monte carlo loop
 for mcidx = 1:Nmc
@@ -67,10 +70,14 @@ for mcidx = 1:Nmc
     [xhat0, Phat0] = PlaneEstimateML(rinit,Pinit);
     
     % Initialize recursive estimate
-    Nupdate = 100;
     xhat = [xhat0 zeros(4,Nupdate)];
     Phat = zeros(3,3,Nupdate);
     Phat(:,:,1) = Phat0;
+    
+    % Find error and store results
+    err_mc(1:2,1,mcidx) = UnitVectorSubtract(nhat_true,xhat(1:3,1));
+    err_mc(3,1,mcidx) = d_true - xhat(4,1);
+    Phat_mc(:,:,1,mcidx) = Phat(:,:,1);
     
     % Begin the loop
     bpeturb = mvnrnd([0 0 0]',P_bhat,Nupdate)';
@@ -125,50 +132,101 @@ for mcidx = 1:Nmc
         xhat(4,ii+1) = dhat + update(3);
         Phat(:,:,ii+1) = (eye(3) - K*H)*Pbar*(eye(3) - K*H)' + K*P_r*K';
         
-    end
-    
-    % Assign results
-    err_mc(1:2,mcidx) = UnitVectorSubtract(nhat_true,xhat(1:3,end));
-    err_mc(3,mcidx) = d_true - xhat(4,end);
-    Phat_mc(:,:,mcidx) = Phat(:,:,end);
-    
+        % Find error and store results
+        err_mc(1:2,ii+1,mcidx) = UnitVectorSubtract(nhat_true,xhat(1:3,ii+1));
+        err_mc(3,ii+1,mcidx) = d_true - xhat(4,ii+1);
+        Phat_mc(:,:,ii+1,mcidx) = Phat(:,:,ii+1);
+        
+    end    
 end
 
 % statistics
-errcov = cov(err_mc');
-avgPhat = mean(Phat_mc,3);
+Perr = zeros(3,3,Nupdate+1);
+Phat_avg = zeros(3,3,Nupdate+1);
+err_avg = zeros(3,Nupdate+1);
+for ii = 1:Nupdate+1
+    err = squeeze(err_mc(:,ii,:));
+    err_avg(:,ii) = mean(err,2);
+    Perr(:,:,ii) = cov(err');
+    Phat_avg(:,:,ii) = mean(Phat_mc(:,:,ii,:),4);
+    
+end
+
+% % Plotting
+% figure
+% idx = 1;
+% subplot(3,1,idx)
+% scatter(1:Nmc,err_mc(idx,:))
+% hold on
+% plot(3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k');
+% plot(3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r');
+% plot(-3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k','HandleVisibility','off');
+% plot(-3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r','HandleVisibility','off');
+% ylabel('Error in \phi 1')
+% 
+% idx = 2;
+% subplot(3,1,idx)
+% hold on
+% scatter(1:Nmc,err_mc(idx,:))
+% plot(3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k');
+% plot(3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r');
+% plot(-3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k','HandleVisibility','off');
+% plot(-3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r','HandleVisibility','off');
+% ylabel('Error in \phi 2')
+% 
+% idx = 3;
+% subplot(3,1,idx)
+% scatter(1:Nmc,err_mc(idx,:))
+% hold on
+% plot(3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k');
+% plot(3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r');
+% plot(-3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k','HandleVisibility','off');
+% plot(-3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r','HandleVisibility','off');
+% legend('Error','Error 3\sigma','Filter 3\sigma')
+% xlabel('MC Run')
+% ylabel('Error in d')
 
 % Plotting
 figure
 idx = 1;
 subplot(3,1,idx)
-scatter(1:Nmc,err_mc(idx,:))
 hold on
-plot(3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k');
-plot(3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r');
-plot(-3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k','HandleVisibility','off');
-plot(-3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r','HandleVisibility','off');
+for ii = 1:Nmc
+    plot(err_mc(idx,:,ii),'LineWidth',.5,'Color',[.5 .5 .5],'HandleVisibility','off')
+end
+plot(err_avg(idx,:),'b','LineWidth',2)
+plot(3*sqrt(squeeze(Perr(idx,idx,:))),'k','LineWidth',2);
+plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
+plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
 ylabel('Error in \phi 1')
 
 idx = 2;
 subplot(3,1,idx)
 hold on
-scatter(1:Nmc,err_mc(idx,:))
-plot(3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k');
-plot(3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r');
-plot(-3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k','HandleVisibility','off');
-plot(-3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r','HandleVisibility','off');
+for ii = 1:Nmc
+    plot(err_mc(idx,:,ii),'LineWidth',.5,'Color',[.5 .5 .5],'HandleVisibility','off')
+end
+plot(err_avg(idx,:),'b','LineWidth',2)
+plot(3*sqrt(squeeze(Perr(idx,idx,:))),'k','LineWidth',2);
+plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
+plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
 ylabel('Error in \phi 2')
 
 idx = 3;
 subplot(3,1,idx)
-scatter(1:Nmc,err_mc(idx,:))
 hold on
-plot(3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k');
-plot(3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r');
-plot(-3*ones(1,Nmc)*sqrt(errcov(idx,idx)),'k','HandleVisibility','off');
-plot(-3*ones(1,Nmc)*sqrt(avgPhat(idx,idx)),'r','HandleVisibility','off');
-legend('Error','Error 3\sigma','Filter 3\sigma')
-xlabel('MC Run')
+for ii = 1:Nmc
+    plot(err_mc(idx,:,ii),'LineWidth',.5,'Color',[.5 .5 .5],'HandleVisibility','off')
+end
+plot(err_avg(idx,:),'b','LineWidth',2)
+plot(3*sqrt(squeeze(Perr(idx,idx,:))),'k','LineWidth',2);
+plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
+plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+xlabel('Time Step')
 ylabel('Error in d')
+legend('Mean Error','Error 3\sigma','Filter 3\sigma')
+
 
