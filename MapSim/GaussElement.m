@@ -145,7 +145,7 @@ classdef GaussElement
                 end
             end
             if(size(y,2) > 1)
-                y = y';         
+                y = y';
                 if(size(y,2) > 1)
                     disp('Warning: non-column y')
                 end
@@ -212,7 +212,7 @@ classdef GaussElement
                 %extract sigma points from measurement
                 [Xi,w] = GetSigPts(z, R_meas, 0.5);
                 
-%                 scatter(Xi(1,:),Xi(2,:))
+                %                 scatter(Xi(1,:),Xi(2,:))
                 
                 %initialize the updated sigma points
                 XiUpdate = zeros(2,5);
@@ -231,14 +231,14 @@ classdef GaussElement
                     var_gauss = .1 + var_gauss;
                     
                     %update the sigma point based on the conditionals
-%                     XiUpdate(2,jj) = mu_gauss + var_gauss*(var_gauss + var_meas)*(mu_meas - mu_gauss);
+                    %                     XiUpdate(2,jj) = mu_gauss + var_gauss*(var_gauss + var_meas)*(mu_meas - mu_gauss);
                     XiUpdate(2,jj) = mu_gauss + var_gauss*(var_gauss + var_meas)*(Xi(2,jj) - mu_gauss);
                     XiUpdate(1,jj) = Xi(1,jj); %x-component not updated!
                     
                     
                 end
                 
-%                 scatter(XiUpdate(1,:),XiUpdate(2,:),'x')
+                %                 scatter(XiUpdate(1,:),XiUpdate(2,:),'x')
                 
                 %find the sample mean and variance of the updated sigma
                 %points
@@ -267,7 +267,7 @@ classdef GaussElement
             obj.mu_xy = xhat;
             obj.P_xy = .00*eye(2) + Phat;
             obj.Nobs = Nmeas;
-               
+            
         end
         
         function obj = UpdateGaussBayes(obj, y, R)
@@ -285,7 +285,7 @@ classdef GaussElement
             
             %helpers
             xbar = mean(y,2);
-%             S = -R;
+            %             S = -R;
             S = zeros(2);
             for jj = 1:n_draw
                 S = S + (1/n_draw)*(y(:,jj) - xbar)*(y(:,jj) - xbar)';
@@ -328,7 +328,7 @@ classdef GaussElement
             xhat = obj.mu_xy;
             Phat = obj.P_xy;
             Nmeas = obj.Nobs;
-             
+            
             z = [x, y]';
             R = zeros(2);
             R(1,1) = P_x;
@@ -352,7 +352,7 @@ classdef GaussElement
             %  options = optimoptions('lsqnonlin',...
             %   'Algorithm','levenberg-marquardt','Display','off');
             %  xfinal = lsqnonlin(fun,x0,LB,[],options);
-
+            
             
             options = optimoptions('fmincon','Display','off');
             xfinal = fmincon(fun,x0,[],[],[],[],LB,[],[],options);
@@ -375,63 +375,63 @@ classdef GaussElement
             obj.mu_xy = xhat_new;
             obj.P_xy = Phat_new;
             obj.Nobs = obj.Nobs + length(x);
-               
+            
         end
         
-%         function obj = UpdateLineEstimateUKF(obj, x, P_x, y, P_y)
-%             %Line 2 gauss update performs an update of the line estimate
-%             %using a unscented kalman filter
-%             
-%             %extract local variables
-%             xhat = obj.mu_mb;
-%             min_s = obj.s1;
-%             max_s = obj.s2;
-%             Phat = obj.P_mb;
-%             n = length(y); %number of measurements
-%             
-%             %create H
-%             H = ones(n,2);
-%             H(:,1) = x;
-%             
-% %             %calculate covariances
-% %             Pxy = Phat*H';
-% %             Pyy = H*Phat*H' + P_y + eye(n)*((Phat(1,1) + xhat(1)).*diag(P_x));
-% %             
-% %             %kalman gain
-% %             K = Pxy/Pyy;
-% %             
-% %             %update
-% %             xhat = xhat + K*(y - H*xhat);
-% %             Phat = (eye(2) - K*H)*Phat*(eye(2) - K*H)' + K*P_y*K';
-% %             obj.mu_mb = xhat;
-% %             obj.P_mb = Phat;
-% %             
-% %             %for all measurements, calculate the s value
-% %             s = zeros(1,n);
-% %             for ii = 1:n
-% %                 
-% %                 %find s, this should be simplified somehow
-% %                 gamma = y(ii) + x(ii)/xhat(1);
-% %                 A = [1, -xhat(1);
-% %                     1, 1/xhat(1)];
-% %                 inter = A\[xhat(2); gamma];
-% %                 xinter = inter(2);
-% %                 s(ii) = xinter*sqrt(1+xhat(1)^2);
-% %                 
-% %             end
-% %             
-% %             %consider updating s1 and s2
-% %             if(min(s) < min_s)
-% %                 obj.s1 = min(s);
-% %             end
-% %             if(max(s) > max_s)
-% %                 obj.s2 = max(s);
-% %             end
-% %             
-% %             %update number of observations
-% %             obj.Nobs = obj.Nobs + n;
-%             
-%         end
+        %         function obj = UpdateLineEstimateUKF(obj, x, P_x, y, P_y)
+        %             %Line 2 gauss update performs an update of the line estimate
+        %             %using a unscented kalman filter
+        %
+        %             %extract local variables
+        %             xhat = obj.mu_mb;
+        %             min_s = obj.s1;
+        %             max_s = obj.s2;
+        %             Phat = obj.P_mb;
+        %             n = length(y); %number of measurements
+        %
+        %             %create H
+        %             H = ones(n,2);
+        %             H(:,1) = x;
+        %
+        % %             %calculate covariances
+        % %             Pxy = Phat*H';
+        % %             Pyy = H*Phat*H' + P_y + eye(n)*((Phat(1,1) + xhat(1)).*diag(P_x));
+        % %
+        % %             %kalman gain
+        % %             K = Pxy/Pyy;
+        % %
+        % %             %update
+        % %             xhat = xhat + K*(y - H*xhat);
+        % %             Phat = (eye(2) - K*H)*Phat*(eye(2) - K*H)' + K*P_y*K';
+        % %             obj.mu_mb = xhat;
+        % %             obj.P_mb = Phat;
+        % %
+        % %             %for all measurements, calculate the s value
+        % %             s = zeros(1,n);
+        % %             for ii = 1:n
+        % %
+        % %                 %find s, this should be simplified somehow
+        % %                 gamma = y(ii) + x(ii)/xhat(1);
+        % %                 A = [1, -xhat(1);
+        % %                     1, 1/xhat(1)];
+        % %                 inter = A\[xhat(2); gamma];
+        % %                 xinter = inter(2);
+        % %                 s(ii) = xinter*sqrt(1+xhat(1)^2);
+        % %
+        % %             end
+        % %
+        % %             %consider updating s1 and s2
+        % %             if(min(s) < min_s)
+        % %                 obj.s1 = min(s);
+        % %             end
+        % %             if(max(s) > max_s)
+        % %                 obj.s2 = max(s);
+        % %             end
+        % %
+        % %             %update number of observations
+        % %             obj.Nobs = obj.Nobs + n;
+        %
+        %         end
         
         function obj = UpdateLineEstimateTLS(obj, x, sig2_x, y, sig2_y)
             %Line 2 gauss update performs an update of the line estimate
@@ -490,7 +490,7 @@ classdef GaussElement
             %stack measurement
             z = [x; y];
             
-           
+            
             %total covariance
             P = obj.P_xy + R;
             
@@ -572,7 +572,7 @@ classdef GaussElement
             b = V\res;
             
             %sigma value
-            sig = norm(b);                       
+            sig = norm(b);
             
             
         end
@@ -584,7 +584,7 @@ classdef GaussElement
             hold on
             
             %sigma value for ellipse
-%             sigma = 3;
+            %             sigma = 3;
             
             % Calculate the eigenvectors and eigenvalues
             [eigenvec, eigenval ] = eig(obj.P_xy);
@@ -613,7 +613,7 @@ classdef GaussElement
             end
             
             %create theta
-            theta = 0:.01:2*pi;
+            theta = 0:.1:2*pi;
             
             %create semi-major and minor axes
             a=sigma*sqrt(largest_eigenval);
@@ -688,14 +688,15 @@ classdef GaussElement
             obj1.Nobs = 0.5*obj1.Nobs;
             obj2.Nobs = 0.5*obj2.Nobs;
             
+            %artificially increase the covariance
+            sf = 1;
+%             sf = 5;
+            obj1.P_mb = sf*obj1.P_mb;
+            obj2.P_mb = sf*obj2.P_mb;
+            
             %update the gaussians of each object
             obj1 = obj1.Line2GaussUpdate();
             obj2 = obj2.Line2GaussUpdate();
-            
-            %artificially increase the covariance
-            sf = 5;
-            obj1.P_mb = sf*obj1.P_mb;
-            obj2.P_mb = sf*obj2.P_mb;
             
             
         end

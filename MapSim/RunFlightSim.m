@@ -13,10 +13,13 @@ addpath("../../matlabScripts")
 GMevalmeth = 'gauss'; %uses the standard gaussian
 % GMevalmeth = 'mixed'; %uses a mixed representation based on s and t
 
+%create plots during execution?
+statusplots = true;
+
 %time parameters
 t_sim = 59;
 t_step = 1;
-pause_length = 1; % time to pause and look at plots for
+pause_length = 2; % time to pause and look at plots for
 
 %trajectory
 traj = 'Ramp'; %straight ramp descent
@@ -38,9 +41,9 @@ FOV = pi/6;
 R_cycle = eye(2);
 
 %gaussian parameters
-maxlength = 50;
-mergethreshold = 0.1;
-bindist = 2;
+maxlength = 10;
+mergethreshold = 0.08;
+bindist = 1.5;
 plotsigma = 2*sqrt(mergethreshold);
 
 %estimator to use
@@ -122,21 +125,27 @@ for ii = 1:N_t
         estimator, maxlength);
     
     % plot
-    gauss_plot_handle = PlotGaussList(main_fig, gauss_list, meas_iter, fitidx, truth_samp, ...
-        x_iter, FOV, plotsigma);
+%     if(statusplots)
+%         gauss_plot_handle = PlotGaussList(main_fig, gauss_list, meas_iter, fitidx, truth_samp, ...
+%             x_iter, FOV, plotsigma);
+%         pause(pause_length);
+%     end
     
     %consider merging
-    gauss_list = MergeGaussList(gauss_list, mergethreshold);
+    %     gauss_list = MergeGaussList(gauss_list, mergethreshold);
     
     % plot
-    gauss_plot_handle = PlotGaussList(main_fig, gauss_list, meas_iter, fitidx, truth_samp, ...
-        x_iter, FOV, plotsigma);
-    
-    pause(pause_length)
+    if(statusplots)
+        gauss_plot_handle = PlotGaussList(main_fig, gauss_list, meas_iter, fitidx, truth_samp, ...
+            x_iter, FOV, plotsigma);
+        pause(pause_length)
+    end
     
     %store
     x(:,ii) = x_iter;
     meas(:,(ii-1)*N_meas_cycle+1:ii*N_meas_cycle) = meas_iter;
+    
+    disp(ii/N_t)
     
 end
 
@@ -147,13 +156,6 @@ plot(x(1,:),x(2,:),'*')
 axis equal
 hold on
 plot(truth_samp(1,:),truth_samp(2,:))
-% scatter(meas(1,:),meas(2,:))
-delete(findall(gcf,'type','text')) %delete all exisiting text
-for jj = 1:length(gauss_list)
-    delete(gauss_plot_handle{jj})
-    
-    % gauss_plot_handle{jj} = gauss_list{jj}.PlotElement(hand, jj);
-end
 xlabel('x')
 ylabel('y')
 legend('Vehicle Trajectory','Terrain')
