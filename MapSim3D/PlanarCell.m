@@ -19,6 +19,8 @@ classdef PlanarCell
         nPointsMax_; % Number of observations after which division occurs
         depth_; % Depth of this cell ( = 0 for top level, = positive for subsequent levels)
         maxDepth_; % Maximum depth for division
+        numOutliers_ = 0; % Number of outliers detected
+        fitScore_ = 0; % Sum of outlier residuals
     end
     
     methods
@@ -72,8 +74,16 @@ classdef PlanarCell
             % Potential total number of points in cell
             npoints = size(obj.points_,2) + size(rmat,2);
             
+            % Check for outliers
+            if(obj.isValid_)
+                 obj = obj.CountOutliers(rmat, Rmat, bhatmat, m0mat);
+            end
+            
+            dividelogic = npoints > 30 && obj.fitScore_/npoints > 4;
+            
             % If the number of points is greater than the max, divide
-            if(npoints > obj.nPointsMax_ && obj.depth_ < obj.maxDepth_)
+            if(dividelogic && obj.depth_ < obj.maxDepth_)
+            %if(npoints > obj.nPointsMax_ && obj.depth_ < obj.maxDepth_)
                 
                 % add points to points
                 if(size(obj.points_,2) > 0)
@@ -161,7 +171,7 @@ classdef PlanarCell
             obj.Rpoints_(:,:,end+1) = R;
         end
         
-        function J = JacobianEval(obj,bhat_1,bhat_2,bhat_3,d,m0_1,m0_2,m0_3,nhat_1,nhat_2,nhat_3)
+        function J = JacobianEval(~,bhat_1,bhat_2,bhat_3,d,m0_1,m0_2,m0_3,nhat_1,nhat_2,nhat_3)
             %JACOBIANEVAL
             %    J = JACOBIANEVAL(BHAT_1,BHAT_2,BHAT_3,D,M0_1,M0_2,M0_3,NHAT_1,NHAT_2,NHAT_3)
             
@@ -281,26 +291,33 @@ classdef PlanarCell
             southeast.Rpoints_ = obj.Rpoints_(:,:,sepoints);
             
             % Either divide or initialize each child
-            if(nwpts > obj.nPointsMax_ && (obj.depth_ + 1) < obj.maxDepth_)
-                northwest = northwest.Divide();
-            else
-                northwest = northwest.InitFromML();
-            end
-            if(nepts > obj.nPointsMax_ && (obj.depth_ + 1) < obj.maxDepth_)
-                northeast = northeast.Divide();
-            else
-                northeast = northeast.InitFromML();
-            end
-            if(swpts > obj.nPointsMax_ && (obj.depth_ + 1) < obj.maxDepth_)
-                southwest = southwest.Divide();
-            else
-                southwest = southwest.InitFromML();
-            end
-            if(septs > obj.nPointsMax_ && (obj.depth_ + 1) < obj.maxDepth_)
-                southeast = southeast.Divide();
-            else
-                southeast = southeast.InitFromML();
-            end
+            %             if(nwpts > obj.nPointsMax_ && (obj.depth_ + 1) < obj.maxDepth_)
+            %                 northwest = northwest.Divide();
+            %             else
+            %                 northwest = northwest.InitFromML();
+            %             end
+            %             if(nepts > obj.nPointsMax_ && (obj.depth_ + 1) < obj.maxDepth_)
+            %                 northeast = northeast.Divide();
+            %             else
+            %                 northeast = northeast.InitFromML();
+            %             end
+            %             if(swpts > obj.nPointsMax_ && (obj.depth_ + 1) < obj.maxDepth_)
+            %                 southwest = southwest.Divide();
+            %             else
+            %                 southwest = southwest.InitFromML();
+            %             end
+            %             if(septs > obj.nPointsMax_ && (obj.depth_ + 1) < obj.maxDepth_)
+            %                 southeast = southeast.Divide();
+            %             else
+            %                 southeast = southeast.InitFromML();
+            %             end
+            
+    
+            northwest = northwest.InitFromML();
+            northeast = northeast.InitFromML();
+            southwest = southwest.InitFromML();
+            southeast = southeast.InitFromML();
+
             
             % Assign children
             obj.northwest_ = northwest;
@@ -325,7 +342,7 @@ classdef PlanarCell
             J = [eye(2); zeros(1,2)];
             
             % Only initialize if npts big enough
-            if(npts < 5)
+            if(npts < 10)
                 return
             end
             
@@ -476,6 +493,71 @@ classdef PlanarCell
                 else
                     z = NaN;
                 end
+            end
+            
+        end
+        
+        function obj = CountOutliers(obj, rmat, Rmat, bhatmat, m0mat)
+            
+            % locals
+            npts = size(rmat,2);
+            nhat = obj.nhat_;
+            dhat = obj.dhat_;
+            Pbar = obj.Phat_;
+            
+            % cycle through each point
+            for ii = 1:npts
+            
+                % Transform measurement to cell frame
+                rcell = rmat(:,ii);
+                rcell(1:2) = rcell(1:2) - obj.center_;
+                m0cell = m0mat(:,ii);
+                m0cell(1:2) = m0cell(1:2) - obj.center_;
+                bhat = bhatmat(:,ii);
+
+                % Predicted measurement
+                t_exp = (dhat - nhat'*m0cell)/(nhat'*bhat);
+                r_exp = m0cell + t_exp*bhat;
+
+                % Skip if observation angle is too large or expected
+                % range negative
+                theta = acos(nhat'*bhat)*180/pi;
+                if(theta < 110 || t_exp <= 0)
+                    continue;
+                end
+
+                % Find the measurement jacobian
+                H = obj.JacobianEval(bhat(1),bhat(2),bhat(3),dhat, m0cell(1),m0cell(2),m0cell(3),nhat(1),nhat(2),nhat(3));
+
+                % Find innovation covariance
+                Pyy = H*Pbar*H' + Rmat(:,:,ii);
+
+                % Find measurement residual
+                res = rcell - r_exp;
+                
+                %eigen decomposition of covariance
+                [V, D] = eig(Pyy);
+
+                %scale eigen vectors by their eigenvalues
+                V(:,1) = V(:,1)*D(1,1);
+                V(:,2) = V(:,2)*D(2,2);
+
+                %solve system
+                b = V\res;
+
+                %sigma value
+                sig = norm(b);
+                obj.fitScore_ = obj.fitScore_ + sig;
+                
+                % update number of outliers
+                if(sig > 6)
+%                     disp('Outlier found!')
+                    obj.numOutliers_ = obj.numOutliers_ + 1;
+                    
+%                     disp(obj.center_)
+%                     disp(obj.numOutliers_)
+                end
+            
             end
             
         end

@@ -54,10 +54,10 @@ end
 % Initialize the tree
 tree = PlanarCell();
 tree.center_ = [0 0]';
-tree.halfWidth_ = 600;
-tree.halfHeight_ = 600;
+tree.halfWidth_ = 700;
+tree.halfHeight_ = 700;
 tree.nPointsMax_ = 100;
-tree.maxDepth_ = 5;
+tree.maxDepth_ = 8;
 tree.depth_ = 0;
 
 % Get truth trajectory at all timesteps
@@ -66,8 +66,7 @@ trajsamp = GetVehiclePose(tsamp,traj);
 % store measuremnets
 meas_all = [];
 
-% figure for tree
-treeplot = figure;
+
 
 % Begin the main loop
 for ii = 1:Nsamp - 1 % don't take measurements at touchdown
@@ -129,11 +128,12 @@ ylabel('y [m]')
 zlabel('z [m]')
 title('Truth')
 hold on
-plot3(trajsamp(1,:),trajsamp(2,:),trajsamp(3,:))
-scatter3(meas_all(1,:),meas_all(2,:),meas_all(3,:),'x')
+% plot3(trajsamp(1,:),trajsamp(2,:),trajsamp(3,:))
+% scatter3(meas_all(1,:),meas_all(2,:),meas_all(3,:),'x')
 axis equal
 
-
+% figure for tree
+treeplot = figure;
 tree.PlotTree(treeplot)
 % scatter3(meas_all(1,:),meas_all(2,:),meas_all(3,:),'x')
 % axis equal
@@ -141,7 +141,7 @@ mesh(xtruthsamp,ytruthsamp,ztruthsamp,'FaceColor','none')
 xlabel('x [m]')
 ylabel('y [m]')
 zlabel('z [m]')
-axis([-600 600 -600 600 -10 50])
+axis([-600 600 -600 600 -10 500])
 
 % Plot error
 errplot = figure;

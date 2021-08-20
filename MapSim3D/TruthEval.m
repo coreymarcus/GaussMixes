@@ -47,14 +47,14 @@ for ii = 1:nx
                 %             slope(ii) = m;
                 
             case 'FlatBottomParabola'
-                a = 1E-4;
-                r = 50; % radius of flat bottom
+                a = 1E-3;
+                r = 200; % radius of flat bottom
                 
                 rad = x(ii)^2 + y(jj)^2;
-                if(rad < r)
+                if(sqrt(rad) < r)
                     h(jj,ii) = 0;
                 else
-                    h(jj,ii) = a*(rad - r);
+                    h(jj,ii) = a*(rad - r^2);
                 end
                 
             otherwise
