@@ -79,7 +79,7 @@ classdef PlanarCell
                  obj = obj.CountOutliers(rmat, Rmat, bhatmat, m0mat);
             end
             
-            dividelogic = npoints > 30 && obj.fitScore_/npoints > 4;
+            dividelogic = npoints > 30 && obj.fitScore_/npoints > 1.5;
             
             % If the number of points is greater than the max, divide
             if(dividelogic && obj.depth_ < obj.maxDepth_)
@@ -454,7 +454,7 @@ classdef PlanarCell
                 end
                 
                 % Plot
-                patch(xpts,ypts,zpts,rand(1,3));
+                patch(xpts,ypts,zpts,rand(1,3),'FaceColor','none','HandleVisibility','off','LineWidth',2);
             end
             
         end
@@ -536,21 +536,25 @@ classdef PlanarCell
                 res = rcell - r_exp;
                 
                 %eigen decomposition of covariance
-                [V, D] = eig(Pyy);
+                %[V, D] = eig(Pyy);
 
                 %scale eigen vectors by their eigenvalues
-                V(:,1) = V(:,1)*D(1,1);
-                V(:,2) = V(:,2)*D(2,2);
+                %V(:,1) = V(:,1)*D(1,1);
+                %V(:,2) = V(:,2)*D(2,2);
 
                 %solve system
-                b = V\res;
+                %b = V\res;
 
                 %sigma value
-                sig = norm(b);
-                obj.fitScore_ = obj.fitScore_ + sig;
+                %sig = norm(b);
+                %obj.fitScore_ = obj.fitScore_ + sig;
+                
+                % Mahalanobis distance
+                mdist = sqrt(res'*(Pyy\res));
+                obj.fitScore_ = obj.fitScore_ + mdist;
                 
                 % update number of outliers
-                if(sig > 6)
+                if(mdist > 6)
 %                     disp('Outlier found!')
                     obj.numOutliers_ = obj.numOutliers_ + 1;
                     

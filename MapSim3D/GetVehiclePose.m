@@ -14,8 +14,8 @@ for ii = 1:n
             
             % Initial conditions
             x0 = 100;
-            y0 = 100;
-            z0 = 1000;
+            y0 = -100;
+            z0 = 2000;
             vx0 = -50;
             vy0 = -50;
             vz0 = -25;

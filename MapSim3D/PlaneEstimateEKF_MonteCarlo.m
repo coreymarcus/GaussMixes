@@ -114,8 +114,12 @@ for mcidx = 1:Nmc
             continue;
         end
         
+        % Find the measured bhat
+        bhat_meas = r_iter - m0_iter;
+        bhat_meas = bhat_meas/norm(bhat_meas);
+        
         % Find the measurement jacobian
-        H = JacobianEval(bhat_iter(1),bhat_iter(2),bhat_iter(3),...
+        H = JacobianEval(bhat_meas(1),bhat_meas(2),bhat_meas(3),...
             dhat,...
             m0_iter(1),m0_iter(2),m0_iter(3),...
             nhat(1),nhat(2),nhat(3));
@@ -187,6 +191,12 @@ end
 % ylabel('Error in d')
 
 % Plotting
+
+set(0,'defaultTextInterpreter','latex');
+set(groot, 'defaultAxesTickLabelInterpreter','latex');
+set(groot, 'defaultLegendInterpreter','latex');
+
+
 figure
 idx = 1;
 subplot(3,1,idx)
@@ -199,7 +209,7 @@ plot(3*sqrt(squeeze(Perr(idx,idx,:))),'k','LineWidth',2);
 plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
 plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
 plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
-ylabel('Error in \phi 1')
+ylabel('$\tilde{n} (1)$')
 
 idx = 2;
 subplot(3,1,idx)
@@ -212,7 +222,7 @@ plot(3*sqrt(squeeze(Perr(idx,idx,:))),'k','LineWidth',2);
 plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
 plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
 plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
-ylabel('Error in \phi 2')
+ylabel('$\tilde{n} (2)$')
 
 idx = 3;
 subplot(3,1,idx)
@@ -226,7 +236,8 @@ plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
 plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
 plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
 xlabel('Time Step')
-ylabel('Error in d')
-legend('Mean Error','Error 3\sigma','Filter 3\sigma')
+ylabel('$\tilde{d}$')
+legend('Mean Error','Error $3\sigma$','Filter $3\sigma$')
+saveas(gcf,'figs/montecarloplane.pdf')
 
 
