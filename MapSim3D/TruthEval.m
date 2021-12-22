@@ -7,6 +7,16 @@ ny = length(y);
 h = zeros(ny,nx);
 slope = 0;
 
+% Persistent data for crater terrain model
+persistent gsdPersist terrainPersist;
+if strcmp(shape, 'RocksAndCraters')
+    if isempty(gsdPersist)
+        load('RockAndCraterDEM.mat','gsd','rockAndCraterDEM');
+        gsdPersist = gsd;
+        terrainPersist = rockAndCraterDEM;
+    end
+end
+
 % run loop
 for ii = 1:nx
     for jj = 1:ny
@@ -56,7 +66,30 @@ for ii = 1:nx
                 else
                     h(jj,ii) = a*(rad - r^2);
                 end
-                
+
+            case 'RocksAndCraters'
+
+%                 % define the x coordinates of the terrain
+%                 [NterrainY, NterrainX] = size(terrainPersist);
+%                 spanX = NterrainX*gsdPersist;
+%                 spanY = NterrainY*gsdPersist;
+%                 xterrain = linspace(-spanX/2,spanX/2,NterrainX);
+%                 yterrain = linspace(-spanY/2,spanY/2,NterrainY);
+% 
+%                 % Interpolate terrain at query points
+%                 xeval = repmat(x,ny,1);
+%                 yeval = repmat(y',1,nx);
+%                 h = interp2(xterrain,yterrain,terrainPersist,xeval,yeval);
+% 
+%                 % we are able to do this all in one call so break
+%                 return
+
+                  % Convert x and y position to indicies in terrain
+                  [NterrainY, NterrainX] = size(terrainPersist);
+                  idxX = round(x(ii)/gsdPersist + NterrainX/2);
+                  idxY = round(x(jj)/gsdPersist + NterrainY/2);
+                  h(jj,ii) = terrainPersist(idxY,idxX);
+
             otherwise
                 disp("Error: Invalid Truth Shape!")
                 return

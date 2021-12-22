@@ -21,6 +21,7 @@ classdef PlanarCell
         maxDepth_; % Maximum depth for division
         numOutliers_ = 0; % Number of outliers detected
         fitScore_ = 0; % Sum of outlier residuals
+        avgFitScoreThresh_ = 0; % Average fit score required for division
     end
     
     methods
@@ -79,7 +80,7 @@ classdef PlanarCell
                  obj = obj.CountOutliers(rmat, Rmat, bhatmat, m0mat);
             end
             
-            dividelogic = npoints > 30 && obj.fitScore_/npoints > 1.5;
+            dividelogic = npoints > 30 && obj.fitScore_/npoints > obj.avgFitScoreThresh_;
             
             % If the number of points is greater than the max, divide
             if(dividelogic && obj.depth_ < obj.maxDepth_)

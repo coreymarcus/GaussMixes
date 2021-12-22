@@ -13,12 +13,18 @@ tf = 60;
 t_step = 1;
 pause_length = 0; % time to pause and look at plots for
 
+% tree settings
+treewidth = 100;
+treeheight = 100;
+
 %trajectory
-traj = 'Ramp'; %straight ramp descent
+% traj = 'Ramp'; %straight ramp descent
+traj = 'ShortRamp'; % Shorter
 
 % true terrain
 % terrain = 'GentleParabola';
-terrain = 'FlatBottomParabola';
+% terrain = 'FlatBottomParabola';
+terrain = 'RocksAndCraters';
 
 % measurement model
 meas_model = 'Simple';
@@ -29,6 +35,9 @@ Nmeasaz = 50;
 elevFOV = pi/6;
 azFOV = pi/6;
 Rmeas = .1*eye(3);
+
+%other settings
+truthgsd = .5;
 
 %% Main
 
@@ -54,8 +63,8 @@ end
 % Initialize the tree
 tree = PlanarCell();
 tree.center_ = [0 0]';
-tree.halfWidth_ = 700;
-tree.halfHeight_ = 700;
+tree.halfWidth_ = treewidth/2;
+tree.halfHeight_ = treeheight/2;
 tree.nPointsMax_ = 100;
 tree.maxDepth_ = 9;
 tree.depth_ = 0;
@@ -65,8 +74,6 @@ trajsamp = GetVehiclePose(tsamp,traj);
 
 % store measuremnets
 meas_all = [];
-
-
 
 % Begin the main loop
 for ii = 1:Nsamp - 1 % don't take measurements at touchdown
@@ -115,8 +122,8 @@ for ii = 1:Nsamp - 1 % don't take measurements at touchdown
 end
 
 % Sample truth
-xtruthsamp = -tree.halfWidth_:2.5:tree.halfWidth_;
-ytruthsamp = -tree.halfHeight_:2.5:tree.halfHeight_;
+xtruthsamp = -tree.halfWidth_:truthgsd:tree.halfWidth_;
+ytruthsamp = -tree.halfHeight_:truthgsd:tree.halfHeight_;
 ztruthsamp = TruthEval(xtruthsamp,ytruthsamp,terrain);
 
 % Sample error
@@ -189,4 +196,5 @@ cbar.Label.Interpreter = 'latex';
 cbar.Label.String = '$\log_{10}(|\mathcal{M} - \mathcal{S}|)$ [m]';
 view(2)
 saveas(gcf,'figs/Mfinalerr.pdf')
+title('Error')
 % axis([-600 600 -600 600 -10 10])
