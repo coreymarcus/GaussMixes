@@ -87,7 +87,14 @@ for ii = 1:nx
                   % Convert x and y position to indicies in terrain
                   [NterrainY, NterrainX] = size(terrainPersist);
                   idxX = round(x(ii)/gsdPersist + NterrainX/2);
-                  idxY = round(x(jj)/gsdPersist + NterrainY/2);
+                  idxY = round(y(jj)/gsdPersist + NterrainY/2);
+
+                  % Constrain idxes
+                  idxX = max(1,idxX);
+                  idxX = min(idxX,NterrainX);
+                  idxY = max(1,idxY);
+                  idxY = min(idxY,NterrainY);
+
                   h(jj,ii) = terrainPersist(idxY,idxX);
 
             otherwise

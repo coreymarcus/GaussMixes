@@ -4,8 +4,8 @@ clc
 
 % Setup terrain parameters
 rng(3)
-width = 1500;
-height = 1500;
+width = 200;
+height = 200;
 gsd = .1;
 xsample = 0:gsd:width;
 ysample = 0:gsd:height;
@@ -13,14 +13,14 @@ Nx = length(xsample);
 Ny = length(ysample);
 groundA = 1E-4;
 groundFlatRadius = 200;
-rockRadiusMean = 1.0;
+rockRadiusMean = 2.5;
 rockRadiusStdDev = 0.25;
-rockAbundance = 0.04;
+rockAbundance = 0.08;
 craterDepthToWidthMean = 0.20;
 craterDepthToWidthStdDev = 0.05;
-craterRadiusMean = 2.5;
+craterRadiusMean = 10;
 craterRadiusStdDev = 0.5;
-craterAbundance = 0.04;
+craterAbundance = 0.08;
 
 % Find the number of rocks and craters
 terrainArea = width*height;

@@ -21,7 +21,7 @@ classdef PlanarCell
         maxDepth_; % Maximum depth for division
         numOutliers_ = 0; % Number of outliers detected
         fitScore_ = 0; % Sum of outlier residuals
-        avgFitScoreThresh_ = 0; % Average fit score required for division
+        avgFitScoreThresh_ = 0*1.5; % Average fit score required for division
     end
     
     methods
@@ -80,10 +80,12 @@ classdef PlanarCell
                  obj = obj.CountOutliers(rmat, Rmat, bhatmat, m0mat);
             end
             
-            dividelogic = npoints > 30 && obj.fitScore_/npoints > obj.avgFitScoreThresh_;
+            dividelogic = npoints > 30 & ...
+                obj.fitScore_/npoints > obj.avgFitScoreThresh_ & ...
+                obj.depth_ < obj.maxDepth_;
             
             % If the number of points is greater than the max, divide
-            if(dividelogic && obj.depth_ < obj.maxDepth_)
+            if(dividelogic)
             %if(npoints > obj.nPointsMax_ && obj.depth_ < obj.maxDepth_)
                 
                 % add points to points
@@ -565,6 +567,59 @@ classdef PlanarCell
             
             end
             
+        end
+
+        function mat = QueryMap(obj, gsd, mat, metric)
+
+            % Return if this cell is not valid
+            if ~obj.isValid_
+                return
+            end
+
+            % Check children or return this cell's data
+            if obj.isDivided_
+                mat = obj.northwest_.QueryMap(gsd,mat,metric);
+                mat = obj.northeast_.QueryMap(gsd,mat,metric);
+                mat = obj.southwest_.QueryMap(gsd,mat,metric);
+                mat = obj.southeast_.QueryMap(gsd,mat,metric);
+            else
+
+                % Find the span of this cell in mat
+                [matrow, matcol] = size(mat);
+                matcenterrow = matrow/2;
+                matcentercol = matcol/2;
+                cellspanx = obj.halfWidth_/gsd;
+                cellspany = obj.halfHeight_/gsd;
+                cellcenterx = obj.center_(1)/gsd + matcentercol;
+                cellcentery = obj.center_(2)/gsd + matcenterrow;
+ 
+                % Convert to row/col idxs
+                leftbound = round(cellcenterx - cellspanx);
+                rightbound = round(cellcenterx + cellspanx);
+                upbound = round(cellcentery - cellspany); % y-axis reversed
+                downbound = round(cellcentery + cellspany); % y-axis reversed
+
+                % Ensure conformity to mat dimensions
+                leftbound = max(leftbound, 1);
+                rightbound = min(rightbound, matcol);
+                upbound = max(upbound, 1);
+                downbound = min(downbound, matrow);
+
+                % Query item
+                switch metric
+                    case 'AvgFitScore'
+                        item = obj.fitScore_/size(obj.points_,2);
+                    case 'NumPoints'
+                        item = size(obj.points_,2);
+                    otherwise
+                        error("Invalid Query Metric")
+                end
+
+                % Write item
+                mat(leftbound:rightbound,upbound:downbound) = item;
+
+            end
+
         end
         
     end

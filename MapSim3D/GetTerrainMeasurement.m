@@ -1,6 +1,5 @@
 function [meas] = GetTerrainMeasurement(m0, bhat, model, terrain)
-%GetTerrainMeasurement generates a single terrain measurement given pose x,
-%measurement bearing theta, covariance R, and model
+%GetTerrainMeasurement generates a single terrain measurement
 
 %initialize output
 meas = zeros(3,1);
@@ -15,14 +14,14 @@ switch model
         
         %intersect
         options = optimset('Display','off');
-        interrange = fzero(fun_inter,[0 150],options);
+        interrange = fzero(fun_inter,[-10 4*abs(m0(3))],options);
         
         % measurement
         meas = m0 + interrange*bhat;
         
     otherwise
         
-        disp("Error: Invalid Measurement Model")
+        error("Invalid Measurement Model")
         
 end
 
