@@ -9,8 +9,8 @@ rng(3);
 
 %time parameters
 t0 = 0;
-tf = 60;
-t_step = .25;
+tf = 100;
+t_step = 1;
 pause_length = 0; % time to pause and look at plots for
 
 %trajectory
@@ -42,8 +42,8 @@ Rmeas = (0.08^2)*eye(3);
 
 %other settings
 truthgsd = 1.5;
-somemeasonly = false; % run entire trajectory or just first measurment
-somemeastarg = 25;
+somemeasonly = true; % run entire trajectory or just first measurment
+somemeastarg = 2;
 
 % tree settings
 switch terrain
@@ -112,13 +112,15 @@ for ii = 1:iters
     Rmeas_iter = zeros(3,3,Nmeas);
     m0mat = zeros(3,Nmeas);
 
+    tic
     for jj = 1:Nmeas
         meas_iter(:,jj) = GetTerrainMeasurement(trajsamp(1:3,ii),...
             bhatinertial(:,jj), meas_model, terrain);
         Rmeas_iter(:,:,jj) = Rmeas;
         m0mat(:,jj) = trajsamp(1:3,ii);
     end
-
+    toc
+    
     % Get measurement noise
     meas_noise = mvnrnd([0 0 0]',Rmeas,Nmeas)';
     meas_iter = meas_iter + meas_noise;
@@ -134,9 +136,18 @@ for ii = 1:iters
         bhatmeas(:,jj) = relpos(:,jj)/norm(relpos(:,jj));
     end
 
-    % Add measurements to the tree
-    tree = tree.AddPoints(meas_iter, Rmeas_iter, bhatmeas, m0mat);
-
+    % Add measurements to the tree in a randomized fashion
+    Nadd = 15;
+    addidx = randi(Nadd,1,Nmeas);
+    tic
+    for jj = 1:Nadd
+        targs = addidx == jj;
+        tree = tree.AddPoints(meas_iter(:,targs),...
+            Rmeas_iter(:,:,targs),...
+            bhatmeas(:,targs),...
+            m0mat(:,targs));
+    end
+    toc
     % Plot
     %     tree.PlotTree(treeplot)
     %     axis([-500 500 -500 500 -500 500])
@@ -178,6 +189,16 @@ pointcountgsd = 1.0;
 pointscount = NaN*zeros(round(2*tree.halfHeight_/pointcountgsd),...
     round(2*tree.halfWidth_/pointcountgsd));
 pointscount = tree.QueryMap(pointcountgsd, pointscount, 'NumPoints');
+
+% Query rejected measurements
+rejectgsd = 1.0;
+rejectcount = NaN*zeros(round(2*tree.halfHeight_/rejectgsd),...
+    round(2*tree.halfWidth_/rejectgsd));
+rejectcount = tree.QueryMap(rejectgsd, rejectcount, 'NumReject');
+
+% Save results
+filename = ['results/', datestr(datetime('now'),'yyyy-mm-dd-HH-MM')];
+save(filename)
 
 %% Plotting
 
@@ -277,3 +298,10 @@ mesh(pointscount,'FaceColor','flat')
 view(2)
 cbar4 = colorbar;
 title('Number of Measurements')
+
+% Plot number of rejects
+rejectplot = figure;
+mesh(rejectcount,'FaceColor','flat')
+view(2)
+cbar5 = colorbar;
+title('Number of Rejected Measurements')

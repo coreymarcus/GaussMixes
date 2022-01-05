@@ -113,7 +113,7 @@ switch traj
     case 'Scan'
 
         % Setup scan target points
-        Nswitch = 5;
+        Nswitch = 8;
         xmin = -30;
         xmax = 30;
         ymin = -30;

@@ -20,8 +20,10 @@ classdef PlanarCell
         depth_; % Depth of this cell ( = 0 for top level, = positive for subsequent levels)
         maxDepth_; % Maximum depth for division
         numOutliers_ = 0; % Number of outliers detected
+        numReject_ = 0; % Number of measurements rejected
+        rejectThresh_ = 500; % Cell reinitialized if more than this number of measurements rejected
         fitScore_ = 0; % Sum of outlier residuals
-        avgFitScoreThresh_ = 0*1.5; % Average fit score required for division
+        avgFitScoreThresh_ = 1.5; % Average fit score required for division
     end
     
     methods
@@ -124,6 +126,13 @@ classdef PlanarCell
                         bhatmat(:,ii),...
                         m0mat(:,ii));
                 end
+                
+                % Check the total number of rejected measurements
+                if obj.numReject_ > obj.rejectThresh_
+                    % Reinitialize
+                    obj = obj.InitFromML();
+                    warning('Cell Reinitialized')                    
+                end
             end
         end
         
@@ -149,6 +158,9 @@ classdef PlanarCell
             theta = acos(nhat'*bhat)*180/pi;
             if(theta < 110 || t_exp <= 0)
                 warning('Measurement rejected')
+                obj.numReject_ = obj.numReject_ + 1;
+                obj.points_(:,end+1) = r;
+                obj.Rpoints_(:,:,end+1) = R;
                 return;
             end
             
@@ -337,6 +349,11 @@ classdef PlanarCell
         end
         
         function obj = InitFromML(obj)
+            
+            % Reset some metrics
+            obj.numOutliers_ = 0; % Number of outliers detected
+            obj.numReject_ = 0; % Number of measurements rejected
+            obj.fitScore_ = 0; % Sum of outlier residuals
             
             % locals
             rmat = obj.points_;
@@ -611,6 +628,8 @@ classdef PlanarCell
                         item = obj.fitScore_/size(obj.points_,2);
                     case 'NumPoints'
                         item = size(obj.points_,2);
+                    case 'NumReject'
+                        item = obj.numReject_;
                     otherwise
                         error("Invalid Query Metric")
                 end
