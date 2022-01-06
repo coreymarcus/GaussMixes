@@ -41,9 +41,9 @@ azFOV = pi/180;
 Rmeas = (0.08^2)*eye(3);
 
 %other settings
-truthgsd = 1.5;
-somemeasonly = true; % run entire trajectory or just first measurment
-somemeastarg = 2;
+truthgsd = .5;
+somemeasonly = false; % run entire trajectory or just first measurment
+somemeastarg = 1;
 
 % tree settings
 switch terrain
@@ -102,16 +102,16 @@ else
 end
 
 for ii = 1:iters
-
+    
     % Rotate bmatbody into the inertial frame
     quatmap2body = trajsamp(4:7,ii)';
     bhatinertial = quatrotate(quatconj(quatmap2body),bmatbody')';
-
+    
     % Get truth terrain measurements
     meas_iter = zeros(3,Nmeas);
     Rmeas_iter = zeros(3,3,Nmeas);
     m0mat = zeros(3,Nmeas);
-
+    
     tic
     for jj = 1:Nmeas
         meas_iter(:,jj) = GetTerrainMeasurement(trajsamp(1:3,ii),...
@@ -124,18 +124,18 @@ for ii = 1:iters
     % Get measurement noise
     meas_noise = mvnrnd([0 0 0]',Rmeas,Nmeas)';
     meas_iter = meas_iter + meas_noise;
-
-
+    
+    
     % Store measurements
     meas_all = [meas_all, meas_iter];
-
+    
     % Corrupt bhat based on noisy measurement
     bhatmeas = zeros(3,Nmeas);
     relpos = meas_iter - m0mat;
     for jj = 1:Nmeas
         bhatmeas(:,jj) = relpos(:,jj)/norm(relpos(:,jj));
     end
-
+    
     % Add measurements to the tree in a randomized fashion
     Nadd = 15;
     addidx = randi(Nadd,1,Nmeas);
@@ -220,6 +220,16 @@ legend('Truth Terrain','Spacecraft Trajectory','Location','northeast')
 axis equal
 saveas(gcf,'figs/truth.pdf')
 
+% Plot truth only
+truthplot2 = figure;
+mesh(xtruthsamp,ytruthsamp,ztruthsamp,'FaceColor','flat')
+xlabel('x [m]')
+ylabel('y [m]')
+zlabel('z [m]')
+title('Truth')
+view(2)
+cbar5 = colorbar;
+
 % Plot estimate
 estplot = figure;
 mesh(xtruthsamp,ytruthsamp,zestplot,'FaceColor','flat')
@@ -231,22 +241,22 @@ view(2)
 cbar0 = colorbar;
 
 % Plot tree and truth in x-y
-xyplot = figure;
-tree.PlotTree(xyplot);
-plot3(trajsamp(1,:),trajsamp(2,:),trajsamp(3,:),'LineWidth',2)
-xlabel('x [m]')
-ylabel('y [m]')
-startpoint = scatter3(trajsamp(1,1),trajsamp(2,1),trajsamp(3,1),'filled');
-startpoint.MarkerFaceColor = 'r';
-startpoint.MarkerEdgeColor = 'k';
-endpoint =  scatter3(trajsamp(1,end),trajsamp(2,end),trajsamp(3,end)+1,'filled');
-endpoint.MarkerFaceColor = 'g';
-endpoint.MarkerEdgeColor = 'k';
-plot3(200*cos(0:.1:2.1*pi),200*sin(0:.1:2.1*pi),50*ones(1,length(0:.1:2.1*pi)),'LineWidth',2)
-view(2)
-axis equal
-legend('Spacecraft Trajectory','Spacecraft Start','Spacecraft Stop','Boundary of Flat Terrain')
-saveas(gcf,'figs/Mfinalxy.pdf')
+% xyplot = figure;
+% tree.PlotTree(xyplot);
+% plot3(trajsamp(1,:),trajsamp(2,:),trajsamp(3,:),'LineWidth',2)
+% xlabel('x [m]')
+% ylabel('y [m]')
+% startpoint = scatter3(trajsamp(1,1),trajsamp(2,1),trajsamp(3,1),'filled');
+% startpoint.MarkerFaceColor = 'r';
+% startpoint.MarkerEdgeColor = 'k';
+% endpoint =  scatter3(trajsamp(1,end),trajsamp(2,end),trajsamp(3,end)+1,'filled');
+% endpoint.MarkerFaceColor = 'g';
+% endpoint.MarkerEdgeColor = 'k';
+% plot3(200*cos(0:.1:2.1*pi),200*sin(0:.1:2.1*pi),50*ones(1,length(0:.1:2.1*pi)),'LineWidth',2)
+% view(2)
+% axis equal
+% legend('Spacecraft Trajectory','Spacecraft Start','Spacecraft Stop','Boundary of Flat Terrain')
+% saveas(gcf,'figs/Mfinalxy.pdf')
 
 % figure for tree
 treeplot = figure;
@@ -260,6 +270,9 @@ zlabel('z [m]')
 % axis([-600 600 -600 600 -10 500])
 view(0,25)
 saveas(gcf,'figs/Mfinal3d.pdf')
+test = axis;
+test(5:6) = [-15 15];
+axis(test);
 
 % Plot error
 errplot = figure;
