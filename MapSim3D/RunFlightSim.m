@@ -9,7 +9,7 @@ rng(3);
 
 %time parameters
 t0 = 0;
-tf = 100;
+tf = 120;
 t_step = 1;
 pause_length = 0; % time to pause and look at plots for
 
