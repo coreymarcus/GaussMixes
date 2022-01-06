@@ -43,7 +43,7 @@ Rmeas = (0.08^2)*eye(3);
 %other settings
 truthgsd = .5;
 somemeasonly = false; % run entire trajectory or just first measurment
-somemeastarg = 1;
+somemeastarg = 10;
 
 % tree settings
 switch terrain

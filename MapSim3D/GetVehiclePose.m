@@ -159,7 +159,7 @@ switch traj
         zdense = zeros(1,n);
 
         % Determine spacecraft location points
-        approachangle = 60;
+        approachangle = 30;
         range = linspace(490,400,n);
         x(2,:) = -1*range.*cosd(approachangle);
         x(3,:) = range.*sind(approachangle);
