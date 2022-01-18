@@ -179,6 +179,25 @@ switch traj
             x(5:7,ii) = cross(z,bhat);
             x(4:7,ii) = x(4:7,ii)/norm(x(4:7,ii));
         end
+        
+        % Plot some things for the paper
+        set(0,'defaultTextInterpreter','latex');
+        set(groot, 'defaultAxesTickLabelInterpreter','latex');
+        set(groot, 'defaultLegendInterpreter','latex');
+        
+        figure
+        plot3(xdense,ydense,zdense,'LineWidth',2)
+        hold on
+        plot3(x(1,:),x(2,:),x(3,:),'LineWidth',2)
+        plot3([-30 30 30 -30 -30],[-30 -30 30 30 -30],zeros(5,1),'k','LineWidth',2)
+        axis equal
+        view(-82,60)
+        grid on
+        xlabel('x [m]')
+        ylabel('y [m]')
+        zlabel('z [m]')
+        legend('LIDAR Targeting Points','Spacecraft Position',...
+            'Hazard Field Boundaries','Location','northeast')
 
     otherwise
         error('Invalid Trajectory')
