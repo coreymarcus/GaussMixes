@@ -23,7 +23,7 @@ classdef PlanarCell
         numReject_ = 0; % Number of measurements rejected
         rejectThresh_ = 500; % Cell reinitialized if more than this number of measurements rejected
         fitScore_ = 0; % Sum of outlier residuals
-        avgFitScoreThresh_ = 1.25; % Average fit score required for division
+        avgFitScoreThresh_ = 1.15; % Average fit score required for division
     end
     
     methods

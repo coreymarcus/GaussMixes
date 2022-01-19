@@ -196,10 +196,6 @@ rejectcount = NaN*zeros(round(2*tree.halfHeight_/rejectgsd),...
     round(2*tree.halfWidth_/rejectgsd));
 rejectcount = tree.QueryMap(rejectgsd, rejectcount, 'NumReject');
 
-% Save results
-filename = ['results/', datestr(datetime('now'),'yyyy-mm-dd-HH-MM')];
-save(filename)
-
 % Find the truth surface normals
 [Xtruthsamp, Ytruthsamp] = meshgrid(xtruthsamp,ytruthsamp);
 [truthnormX, truthnormY, truthnormZ] = surfnorm(Xtruthsamp,...
@@ -207,7 +203,7 @@ save(filename)
 
 % Query estimated surface normals
 surfnormgsd = truthgsd;
-estsurfnorm = zeros(length(ytruthsamp),length(xtruthsamp),3);
+estsurfnorm = NaN*zeros(length(ytruthsamp),length(xtruthsamp),3);
 estsurfnorm = tree.QueryMap(surfnormgsd, estsurfnorm, 'SurfNorm');
 
 % Find error in surface normals
@@ -219,6 +215,10 @@ for ii = 1:length(xtruthsamp)
             truthnormZ(jj,ii)*estsurfnorm(jj,ii,3));
     end
 end
+
+% Save results
+filename = ['results/', datestr(datetime('now'),'yyyy-mm-dd-HH-MM')];
+save(filename)
 
 %% Plotting
 

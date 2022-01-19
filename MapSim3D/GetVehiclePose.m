@@ -159,7 +159,7 @@ switch traj
         zdense = zeros(1,n);
 
         % Determine spacecraft location points
-        approachangle = 30;
+        approachangle = 60;
         range = linspace(490,400,n);
         x(2,:) = -1*range.*cosd(approachangle);
         x(3,:) = range.*sind(approachangle);
@@ -180,6 +180,12 @@ switch traj
             x(4:7,ii) = x(4:7,ii)/norm(x(4:7,ii));
         end
         
+        % Create another approach angle for the plotting
+        approachangle2 = 30;
+        x2 = zeros(size(x));
+        x2(2,:) = -1*range.*cosd(approachangle2);
+        x2(3,:) = range.*sind(approachangle2);
+        
         % Plot some things for the paper
         set(0,'defaultTextInterpreter','latex');
         set(groot, 'defaultAxesTickLabelInterpreter','latex');
@@ -189,6 +195,7 @@ switch traj
         plot3(xdense,ydense,zdense,'LineWidth',2)
         hold on
         plot3(x(1,:),x(2,:),x(3,:),'LineWidth',2)
+        plot3(x2(1,:),x2(2,:),x2(3,:),'LineWidth',2)
         plot3([-30 30 30 -30 -30],[-30 -30 30 30 -30],zeros(5,1),'k','LineWidth',2)
         axis equal
         view(-82,60)
@@ -196,8 +203,9 @@ switch traj
         xlabel('x [m]')
         ylabel('y [m]')
         zlabel('z [m]')
-        legend('LIDAR Targeting Points','Spacecraft Position',...
-            'Hazard Field Boundaries','Location','northeast')
+        legend('LIDAR Targeting Points','60 Degree Spacecraft Approach',...
+            '30 Degree Spacecraft Approach','Hazard Field Boundaries',...
+            'Location','northeast')
 
     otherwise
         error('Invalid Trajectory')
