@@ -156,6 +156,24 @@ for ii = 1:Nupdate+1
     
 end
 
+% Count the number of error points which are outside 3sigma bounds
+outsidebounds = zeros(3,Nupdate+1);
+for ii = 1:Nupdate+1
+    bound1 = 3*sqrt(Phat_avg(1,1,ii));
+    outsidebounds(1,ii) = sum(abs(err_mc(1,ii,:)) > bound1);
+    
+    bound2 = 3*sqrt(Phat_avg(2,2,ii));
+    outsidebounds(2,ii) = sum(abs(err_mc(2,ii,:)) > bound2);
+    
+    bound3 = 3*sqrt(Phat_avg(3,3,ii));
+    outsidebounds(3,ii) = sum(abs(err_mc(3,ii,:)) > bound3);
+end
+
+% Total number of errors outside bounds
+sumoutside = sum(sum(outsidebounds));
+fracoutside = sumoutside/((Nupdate+1)*Nmc*3)
+    
+
 % % Plotting
 % figure
 % idx = 1;
@@ -206,9 +224,9 @@ for ii = 1:Nmc
 end
 plot(err_avg(idx,:),'b','LineWidth',2)
 plot(3*sqrt(squeeze(Perr(idx,idx,:))),'k','LineWidth',2);
-plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'--r','LineWidth',2);
 plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
-plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'--r','LineWidth',2);
 ylabel('$\tilde{n} (1)$')
 
 idx = 2;
@@ -219,25 +237,26 @@ for ii = 1:Nmc
 end
 plot(err_avg(idx,:),'b','LineWidth',2)
 plot(3*sqrt(squeeze(Perr(idx,idx,:))),'k','LineWidth',2);
-plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'--r','LineWidth',2);
 plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
-plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'--r','LineWidth',2);
 ylabel('$\tilde{n} (2)$')
 
 idx = 3;
 subplot(3,1,idx)
 hold on
-for ii = 1:Nmc
+plot(err_mc(idx,:,1),'LineWidth',.5,'Color',[.5 .5 .5],'HandleVisibility','on')
+for ii = 2:Nmc
     plot(err_mc(idx,:,ii),'LineWidth',.5,'Color',[.5 .5 .5],'HandleVisibility','off')
 end
 plot(err_avg(idx,:),'b','LineWidth',2)
 plot(3*sqrt(squeeze(Perr(idx,idx,:))),'k','LineWidth',2);
-plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(3*sqrt(squeeze(Phat_avg(idx,idx,:))),'--r','LineWidth',2);
 plot(-3*sqrt(squeeze(Perr(idx,idx,:))),'k','HandleVisibility','off','LineWidth',2);
-plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'r','LineWidth',2);
+plot(-3*sqrt(squeeze(Phat_avg(idx,idx,:))),'--r','LineWidth',2);
 xlabel('Time Step')
 ylabel('$\tilde{d}$')
-legend('Mean Error','Error $3\sigma$','Filter $3\sigma$')
+legend('Error','Mean Error','Error $3\sigma$','Filter $3\sigma$')
 saveas(gcf,'figs/montecarloplane.pdf')
 
 
