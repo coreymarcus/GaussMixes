@@ -42,7 +42,7 @@ Rmeas = (0.08^2)*eye(3);
 
 %other settings
 truthgsd = .5;
-somemeasonly = true; % run entire trajectory or just first measurment
+somemeasonly = false; % run entire trajectory or just first measurment
 somemeastarg = 5;
 
 % tree settings
@@ -57,6 +57,11 @@ switch terrain
         maxdepth = 4;
 end
 
+% settings to create a movie for the presentation
+createmovie = true;
+if(createmovie)
+    movieplot = figure;
+end
 
 %% Main
 
@@ -94,6 +99,11 @@ trajsamp = GetVehiclePose(tsamp,traj);
 % store measuremnets
 meas_all = [];
 
+% Sample truth
+xtruthsamp = -tree.halfWidth_:truthgsd:tree.halfWidth_;
+ytruthsamp = -tree.halfHeight_:truthgsd:tree.halfHeight_;
+ztruthsamp = TruthEval(xtruthsamp,ytruthsamp,terrain);
+
 % Begin the main loop
 if somemeasonly
     iters = somemeastarg;
@@ -102,16 +112,16 @@ else
 end
 
 for ii = 1:iters
-    
+
     % Rotate bmatbody into the inertial frame
     quatmap2body = trajsamp(4:7,ii)';
     bhatinertial = quatrotate(quatconj(quatmap2body),bmatbody')';
-    
+
     % Get truth terrain measurements
     meas_iter = zeros(3,Nmeas);
     Rmeas_iter = zeros(3,3,Nmeas);
     m0mat = zeros(3,Nmeas);
-    
+
     tic
     for jj = 1:Nmeas
         meas_iter(:,jj) = GetTerrainMeasurement(trajsamp(1:3,ii),...
@@ -120,22 +130,22 @@ for ii = 1:iters
         m0mat(:,jj) = trajsamp(1:3,ii);
     end
     toc
-    
+
     % Get measurement noise
     meas_noise = mvnrnd([0 0 0]',Rmeas,Nmeas)';
     meas_iter = meas_iter + meas_noise;
-    
-    
+
+
     % Store measurements
     meas_all = [meas_all, meas_iter];
-    
+
     % Corrupt bhat based on noisy measurement
     bhatmeas = zeros(3,Nmeas);
     relpos = meas_iter - m0mat;
     for jj = 1:Nmeas
         bhatmeas(:,jj) = relpos(:,jj)/norm(relpos(:,jj));
     end
-    
+
     % Add measurements to the tree in a randomized fashion
     Nadd = 15;
     addidx = randi(Nadd,1,Nmeas);
@@ -154,12 +164,34 @@ for ii = 1:iters
     %     scatter3(meas_all(1,:),meas_all(2,:),meas_all(3,:),'x')
     %     pause(0)
     %     clf(treeplot)
-end
 
-% Sample truth
-xtruthsamp = -tree.halfWidth_:truthgsd:tree.halfWidth_;
-ytruthsamp = -tree.halfHeight_:truthgsd:tree.halfHeight_;
-ztruthsamp = TruthEval(xtruthsamp,ytruthsamp,terrain);
+    if(createmovie)
+        % figure for tree
+        figure(movieplot);
+        clf(movieplot);
+        tree.PlotTree(movieplot, 0)
+        mesh(xtruthsamp,ytruthsamp,ztruthsamp,'FaceColor','none')
+        xlabel('x [m]')
+        ylabel('y [m]')
+        zlabel('z [m]')
+        test = axis;
+        test([1 3]) = test([1 3]) - 3;
+        test([2 4]) = test([2 4]) + 3;
+        test(5:6) = [-15 15];
+        axis(test);
+        view(47,39)
+
+        % Draw bounding box for LIDAR
+        UL = meas_iter(:,1);
+        LR = meas_iter(:,end);
+        xbox = [UL(1), LR(1), LR(1), UL(1), UL(1)];
+        ybox = [UL(2), UL(2), LR(2), LR(2), UL(2)];
+%         zbox = 0.5 + [UL(3), LR(3), LR(3), UL(3), UL(3)];
+        zbox = ones(1,5);
+        plot3(xbox,ybox,zbox,'r','LineWidth',2)
+        saveas(gcf,strcat('figs/movie/movie',num2str(ii,'%03d'),'.png'))
+    end
+end
 
 % Sample error
 zestsamp = zeros(size(ztruthsamp));
@@ -218,7 +250,7 @@ end
 
 % Save results
 filename = ['results/', datestr(datetime('now'),'yyyy-mm-dd-HH-MM')];
-save(filename)
+save(filename,'-regexp', '^(?!(movieplot)$).')
 
 %% Plotting
 
