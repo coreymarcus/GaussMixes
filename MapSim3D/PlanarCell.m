@@ -23,7 +23,7 @@ classdef PlanarCell
         numReject_ = 0; % Number of measurements rejected
         rejectThresh_ = 500; % Cell reinitialized if more than this number of measurements rejected
         fitScore_ = 0; % Sum of outlier residuals
-        avgFitScoreThresh_ = 1.5; % Average fit score required for division
+        avgFitScoreThresh_ = 1.15; % Average fit score required for division
     end
     
     methods
@@ -79,7 +79,7 @@ classdef PlanarCell
             
             % Check for outliers
             if(obj.isValid_)
-                 obj = obj.CountOutliers(rmat, Rmat, bhatmat, m0mat);
+                obj = obj.CountOutliers(rmat, Rmat, bhatmat, m0mat);
             end
             
             dividelogic = npoints > 30 & ...
@@ -88,7 +88,7 @@ classdef PlanarCell
             
             % If the number of points is greater than the max, divide
             if(dividelogic)
-            %if(npoints > obj.nPointsMax_ && obj.depth_ < obj.maxDepth_)
+                %if(npoints > obj.nPointsMax_ && obj.depth_ < obj.maxDepth_)
                 
                 % add points to points
                 if(size(obj.points_,2) > 0)
@@ -131,7 +131,7 @@ classdef PlanarCell
                 if obj.numReject_ > obj.rejectThresh_
                     % Reinitialize
                     obj = obj.InitFromML();
-                    warning('Cell Reinitialized')                    
+                    warning('Cell Reinitialized')
                 end
             end
         end
@@ -327,12 +327,12 @@ classdef PlanarCell
             %                 southeast = southeast.InitFromML();
             %             end
             
-    
+            
             northwest = northwest.InitFromML();
             northeast = northeast.InitFromML();
             southwest = southwest.InitFromML();
             southeast = southeast.InitFromML();
-
+            
             
             % Assign children
             obj.northwest_ = northwest;
@@ -434,7 +434,7 @@ classdef PlanarCell
             
         end
         
-        function PlotTree(obj, fighandle)
+        function PlotTree(obj, fighandle, offset)
             
             % Set figure
             figure(fighandle)
@@ -447,10 +447,10 @@ classdef PlanarCell
             
             % Plot this cell or its children
             if(obj.isDivided_)
-                obj.northwest_.PlotTree(fighandle);
-                obj.northeast_.PlotTree(fighandle);
-                obj.southwest_.PlotTree(fighandle);
-                obj.southeast_.PlotTree(fighandle);
+                obj.northwest_.PlotTree(fighandle, offset);
+                obj.northeast_.PlotTree(fighandle, offset);
+                obj.southwest_.PlotTree(fighandle, offset);
+                obj.southeast_.PlotTree(fighandle, offset);
             else
                 
                 % Generate x and y points for plotting
@@ -474,7 +474,7 @@ classdef PlanarCell
                 end
                 
                 % Plot
-                patch(xpts,ypts,zpts,rand(1,3),'FaceColor','none','HandleVisibility','off','LineWidth',2);
+                patch(xpts,ypts,offset+zpts,rand(1,3),'FaceColor','none','HandleVisibility','off','LineWidth',1);
             end
             
         end
@@ -497,17 +497,17 @@ classdef PlanarCell
                 else
                     error('Bad coordinate!')
                 end
-               
-            else  
+                
+            else
                 if(obj.isValid_)
                     %convert inputs to local
                     xlocal = x - obj.center_(1);
                     ylocal = y - obj.center_(2);
-
+                    
                     % locals
                     nhat = obj.nhat_;
                     dhat = obj.dhat_;
-
+                    
                     % z coordinate
                     z = (dhat - nhat(1)*xlocal - nhat(2)*ylocal)/nhat(3);
                 else
@@ -527,44 +527,44 @@ classdef PlanarCell
             
             % cycle through each point
             for ii = 1:npts
-            
+                
                 % Transform measurement to cell frame
                 rcell = rmat(:,ii);
                 rcell(1:2) = rcell(1:2) - obj.center_;
                 m0cell = m0mat(:,ii);
                 m0cell(1:2) = m0cell(1:2) - obj.center_;
                 bhat = bhatmat(:,ii);
-
+                
                 % Predicted measurement
                 t_exp = (dhat - nhat'*m0cell)/(nhat'*bhat);
                 r_exp = m0cell + t_exp*bhat;
-
+                
                 % Skip if observation angle is too large or expected
                 % range negative
                 theta = acos(nhat'*bhat)*180/pi;
                 if(theta < 110 || t_exp <= 0)
                     continue;
                 end
-
+                
                 % Find the measurement jacobian
                 H = obj.JacobianEval(bhat(1),bhat(2),bhat(3),dhat, m0cell(1),m0cell(2),m0cell(3),nhat(1),nhat(2),nhat(3));
-
+                
                 % Find innovation covariance
                 Pyy = H*Pbar*H' + Rmat(:,:,ii);
-
+                
                 % Find measurement residual
                 res = rcell - r_exp;
                 
                 %eigen decomposition of covariance
                 %[V, D] = eig(Pyy);
-
+                
                 %scale eigen vectors by their eigenvalues
                 %V(:,1) = V(:,1)*D(1,1);
                 %V(:,2) = V(:,2)*D(2,2);
-
+                
                 %solve system
                 %b = V\res;
-
+                
                 %sigma value
                 %sig = norm(b);
                 %obj.fitScore_ = obj.fitScore_ + sig;
@@ -575,24 +575,24 @@ classdef PlanarCell
                 
                 % update number of outliers
                 if(mdist > 6)
-%                     disp('Outlier found!')
+                    %                     disp('Outlier found!')
                     obj.numOutliers_ = obj.numOutliers_ + 1;
                     
-%                     disp(obj.center_)
-%                     disp(obj.numOutliers_)
+                    %                     disp(obj.center_)
+                    %                     disp(obj.numOutliers_)
                 end
-            
+                
             end
             
         end
-
+        
         function mat = QueryMap(obj, gsd, mat, metric)
-
+            
             % Return if this cell is not valid
             if ~obj.isValid_
                 return
             end
-
+            
             % Check children or return this cell's data
             if obj.isDivided_
                 mat = obj.northwest_.QueryMap(gsd,mat,metric);
@@ -600,45 +600,56 @@ classdef PlanarCell
                 mat = obj.southwest_.QueryMap(gsd,mat,metric);
                 mat = obj.southeast_.QueryMap(gsd,mat,metric);
             else
-
+                
                 % Find the span of this cell in mat
-                [matrow, matcol] = size(mat);
+                D = size(mat);
+                matrow = D(1);
+                matcol = D(2);
                 matcenterrow = matrow/2;
                 matcentercol = matcol/2;
                 cellspanx = obj.halfWidth_/gsd;
                 cellspany = obj.halfHeight_/gsd;
                 cellcenterx = obj.center_(1)/gsd + matcentercol;
                 cellcentery = obj.center_(2)/gsd + matcenterrow;
- 
+                
                 % Convert to row/col idxs
                 leftbound = round(cellcenterx - cellspanx);
                 rightbound = round(cellcenterx + cellspanx);
                 upbound = round(cellcentery - cellspany); % y-axis reversed
                 downbound = round(cellcentery + cellspany); % y-axis reversed
-
+                
                 % Ensure conformity to mat dimensions
                 leftbound = max(leftbound, 1);
                 rightbound = min(rightbound, matcol);
                 upbound = max(upbound, 1);
                 downbound = min(downbound, matrow);
-
+                
                 % Query item
                 switch metric
                     case 'AvgFitScore'
                         item = obj.fitScore_/size(obj.points_,2);
+                        % Write item
+                        mat(leftbound:rightbound,upbound:downbound,:) = item;
                     case 'NumPoints'
                         item = size(obj.points_,2);
+                        % Write item
+                        mat(leftbound:rightbound,upbound:downbound,:) = item;
                     case 'NumReject'
                         item = obj.numReject_;
+                        % Write item
+                        mat(leftbound:rightbound,upbound:downbound,:) = item;
+                    case 'SurfNorm'
+                        item = obj.nhat_;
+                        for ii = leftbound:rightbound
+                            for jj = upbound:downbound
+                                mat(jj,ii,:) = item;
+                            end
+                        end
                     otherwise
                         error("Invalid Query Metric")
                 end
-
-                % Write item
-                mat(leftbound:rightbound,upbound:downbound) = item;
-
             end
-
+            
         end
         
     end

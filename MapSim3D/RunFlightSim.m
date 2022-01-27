@@ -149,7 +149,7 @@ for ii = 1:iters
     end
     toc
     % Plot
-    %     tree.PlotTree(treeplot)
+    %     tree.PlotTree(treeplot, 0)
     %     axis([-500 500 -500 500 -500 500])
     %     scatter3(meas_all(1,:),meas_all(2,:),meas_all(3,:),'x')
     %     pause(0)
@@ -173,10 +173,10 @@ maperr2 = ztruthsamp - zestsamp;
 
 % Trim estimate
 zestplot = zestsamp;
-zestplot(abs(zestplot) > 15) = NaN;
+zestplot(abs(zestplot) > 2.5) = NaN;
 
 % Set large errors to zero
-maperr2(abs(maperr2) > 50) = NaN;
+maperr2(abs(maperr2) > 20) = NaN;
 
 % Query map fit score
 fitscoregsd = 1.0;
@@ -195,6 +195,26 @@ rejectgsd = 1.0;
 rejectcount = NaN*zeros(round(2*tree.halfHeight_/rejectgsd),...
     round(2*tree.halfWidth_/rejectgsd));
 rejectcount = tree.QueryMap(rejectgsd, rejectcount, 'NumReject');
+
+% Find the truth surface normals
+[Xtruthsamp, Ytruthsamp] = meshgrid(xtruthsamp,ytruthsamp);
+[truthnormX, truthnormY, truthnormZ] = surfnorm(Xtruthsamp,...
+    Ytruthsamp,ztruthsamp);
+
+% Query estimated surface normals
+surfnormgsd = truthgsd;
+estsurfnorm = NaN*zeros(length(ytruthsamp),length(xtruthsamp),3);
+estsurfnorm = tree.QueryMap(surfnormgsd, estsurfnorm, 'SurfNorm');
+
+% Find error in surface normals
+surfnormerr = zeros(length(ytruthsamp),length(xtruthsamp));
+for ii = 1:length(xtruthsamp)
+    for jj = 1:length(ytruthsamp)
+        surfnormerr(jj,ii) = acosd(truthnormX(jj,ii)*estsurfnorm(jj,ii,1) + ...
+            truthnormY(jj,ii)*estsurfnorm(jj,ii,2) + ...
+            truthnormZ(jj,ii)*estsurfnorm(jj,ii,3));
+    end
+end
 
 % Save results
 filename = ['results/', datestr(datetime('now'),'yyyy-mm-dd-HH-MM')];
@@ -222,27 +242,52 @@ saveas(gcf,'figs/truth.pdf')
 
 % Plot truth only
 truthplot2 = figure;
-mesh(xtruthsamp,ytruthsamp,ztruthsamp,'FaceColor','flat')
+mesh(xtruthsamp,ytruthsamp,ztruthsamp,'FaceColor','interp')
 xlabel('x [m]')
 ylabel('y [m]')
 zlabel('z [m]')
-title('Truth')
 view(2)
 cbar5 = colorbar;
+cbar5.Label.Interpreter = 'latex';
+cbar5.Label.String = 'Elevation [m]';
+saveas(gcf,'figs/truthelev.pdf')
+title('Truth')
+
+
+% Plot truth with cell divisions
+truthplot3 = figure;
+mesh(xtruthsamp,ytruthsamp,ztruthsamp,'FaceColor','interp')
+xlabel('x [m]')
+ylabel('y [m]')
+zlabel('z [m]')
+view(2)
+cbar5 = colorbar;
+cbar5.Label.Interpreter = 'latex';
+cbar5.Label.String = 'Elevation [m]';
+hold on
+tree.PlotTree(truthplot3, 100)
+saveas(gcf,'figs/truthpluscells.pdf')
+title('Truth With Cell Divisions')
 
 % Plot estimate
+zestplot = zestsamp;
+zestplot(zestplot > 2.5) = 2.5;
+zestplot(zestplot < -0.4) = -0.4;
 estplot = figure;
 mesh(xtruthsamp,ytruthsamp,zestplot,'FaceColor','flat')
 xlabel('x [m]')
 ylabel('y [m]')
 zlabel('z [m]')
-title('Estimate')
 view(2)
 cbar0 = colorbar;
+cbar0.Label.Interpreter = 'latex';
+cbar0.Label.String = 'Elevation [m]';
+saveas(gcf,'figs/estelev.pdf')
+title('Estimate')
 
 % Plot tree and truth in x-y
 % xyplot = figure;
-% tree.PlotTree(xyplot);
+% tree.PlotTree(xyplot, 0);
 % plot3(trajsamp(1,:),trajsamp(2,:),trajsamp(3,:),'LineWidth',2)
 % xlabel('x [m]')
 % ylabel('y [m]')
@@ -260,19 +305,19 @@ cbar0 = colorbar;
 
 % figure for tree
 treeplot = figure;
-tree.PlotTree(treeplot)
+tree.PlotTree(treeplot, 0)
 % scatter3(meas_all(1,:),meas_all(2,:),meas_all(3,:),'x')
 % axis equal
 mesh(xtruthsamp,ytruthsamp,ztruthsamp,'FaceColor','none')
 xlabel('x [m]')
 ylabel('y [m]')
 zlabel('z [m]')
-% axis([-600 600 -600 600 -10 500])
-view(0,25)
-saveas(gcf,'figs/Mfinal3d.pdf')
 test = axis;
 test(5:6) = [-15 15];
 axis(test);
+view(47,39)
+saveas(gcf,'figs/Mfinal3d.pdf')
+
 
 % Plot error
 errplot = figure;
@@ -287,16 +332,66 @@ saveas(gcf,'figs/Mfinalerr.pdf')
 title('Error')
 % axis([-600 600 -600 600 -10 10])
 
+% Determine maperror 2 colors
+% errinterp = [-7 -1 -.5:.1:.5 1 30];
+errinterp = [0:.1:1 2 10 30];
+colorinterp = linspace(0,1,length(errinterp));
+maperr2color = zeros(size(maperr2));
+for ii = 1:length(xtruthsamp)
+    for jj = 1:length(ytruthsamp)
+        maperr2color(jj,ii) = interp1(errinterp,colorinterp,abs(maperr2(jj,ii)));
+    end
+end
+
+% Create tick labels
+ticklabels = num2cell(errinterp);
+for ii = 1:length(ticklabels)
+    ticklabels{ii} = num2str(ticklabels{ii});
+end
+
 % Plot a more natural error
 errplot2 = figure;
-mesh(xtruthsamp,ytruthsamp,maperr2,'FaceColor','interp')
+mesh(xtruthsamp,ytruthsamp,maperr2,maperr2color,'FaceColor','interp')
 xlabel('x [m]')
 ylabel('y [m]')
-title('Error 2')
 cbar2 = colorbar;
 cbar2.Label.Interpreter = 'latex';
-cbar2.Label.String = '$|\mathcal{M} - \mathcal{S}$ [m]';
+cbar2.Label.String = 'Absolute Error [m]';
+cbar2.Ticks = colorinterp;
+cbar2.TickLabels = ticklabels;
 view(2)
+saveas(gcf,'figs/abserr.pdf')
+title('Absolute Error')
+
+% Determine surface normal error colors
+errinterp2 = [0:10 30 45 180];
+colorinterp2 = linspace(0,1,length(errinterp2));
+surfnormerrcolor = zeros(size(surfnormerr));
+for ii = 1:length(xtruthsamp)
+    for jj = 1:length(ytruthsamp)
+        surfnormerrcolor(jj,ii) = interp1(errinterp2,colorinterp2,abs(surfnormerr(jj,ii)));
+    end
+end
+
+% Create tick labels
+ticklabels2 = num2cell(errinterp2);
+for ii = 1:length(ticklabels2)
+    ticklabels2{ii} = num2str(ticklabels2{ii});
+end
+
+% Plot surface normal error
+surfnormplot = figure;
+mesh(xtruthsamp,ytruthsamp,surfnormerr,surfnormerrcolor,'FaceColor','interp')
+xlabel('x [m]')
+ylabel('y [m]')
+cbar7 = colorbar;
+cbar7.Label.Interpreter = 'latex';
+cbar7.Label.String = 'Error [deg.]';
+cbar7.Ticks = colorinterp2;
+cbar7.TickLabels = ticklabels2;
+view(2)
+saveas(gcf,'figs/surfnormerr.pdf')
+title('Surface Normal Error')
 
 % Plot fitscore
 fitplot = figure;
