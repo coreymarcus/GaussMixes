@@ -248,7 +248,34 @@ for ii = 1:length(xtruthsamp)
     end
 end
 
-% Save results
+% Find estimate error for the tree
+tree = tree.FindTruthPlane(truthgsd, terrain);
+
+% Query Estimate Error Norm
+esterrnormgsd = 1.0;
+esterrnorm = NaN*zeros(round(2*tree.halfHeight_/esterrnormgsd),...
+    round(2*tree.halfWidth_/esterrnormgsd));
+esterrnorm = tree.QueryMap(esterrnormgsd, esterrnorm, 'EstErrNorm');
+
+% Query Estimate Error
+esterrgsd = 1.0;
+esterr = NaN*zeros(round(2*tree.halfHeight_/esterrgsd),...
+    round(2*tree.halfWidth_/esterrgsd),3);
+esterr = tree.QueryMap(esterrgsd, esterr, 'EstErr');
+esterrunwrap = [reshape(esterr(:,:,1),1,[]);
+    reshape(esterr(:,:,2),1,[]);
+    reshape(esterr(:,:,3),1,[])];
+
+% Query Estimate Variance
+estvargsd = 1.0;
+estvar = NaN*zeros(round(2*tree.halfHeight_/estvargsd),...
+    round(2*tree.halfWidth_/estvargsd),3);
+estvar = tree.QueryMap(estvargsd, estvar, 'EstVar');
+estvarunwrap = [reshape(estvar(:,:,1),1,[]);
+    reshape(estvar(:,:,2),1,[]);
+    reshape(estvar(:,:,3),1,[])];
+
+%% Save results
 filename = ['results/', datestr(datetime('now'),'yyyy-mm-dd-HH-MM')];
 save(filename,'-regexp', '^(?!(movieplot)$).')
 
@@ -266,7 +293,7 @@ ylabel('y [m]')
 zlabel('z [m]')
 title('Truth')
 hold on
-plot3(trajsamp(1,:),trajsamp(2,:),trajsamp(3,:),'k-*','LineWidth',2)
+%plot3(trajsamp(1,:),trajsamp(2,:),trajsamp(3,:),'k-*','LineWidth',2)
 scatter3(meas_all(1,:),meas_all(2,:),meas_all(3,:),'x')
 legend('Truth Terrain','Spacecraft Trajectory','Location','northeast')
 axis equal
@@ -431,6 +458,38 @@ mesh(fitscore,'FaceColor','flat')
 view(2)
 cbar3 = colorbar;
 title('Fit Score')
+
+% Plot estimate error norm
+esterrnormplot = figure;
+mesh(esterrnorm,'FaceColor','flat')
+view(2)
+cbar6 = colorbar;
+title('Estimate Error Norm')
+
+% Plot estimate error
+esterrplot = figure;
+for ii = 1:3
+    subplot(3,1,ii)
+    mesh(esterr(:,:,ii),'FaceColor','flat')
+    hold on
+    mesh(3*sqrt(estvar(:,:,ii)),"EdgeColor","r","FaceColor","none")
+    mesh(-3*sqrt(estvar(:,:,ii)),"EdgeColor","r","FaceColor","none")
+    view(2)
+    cbar6 = colorbar;
+    title(strcat('Estimate Error Element ',num2str(ii)))
+end
+
+% Plot estimate unwrapped error
+esterrunwrapplot = figure;
+for ii = 1:3
+    subplot(3,1,ii)
+    plot(esterrunwrap(ii,:),'k')
+    hold on
+    plot(3*sqrt(estvarunwrap(ii,:)),'r')
+    plot(-3*sqrt(estvarunwrap(ii,:)),'r')
+    title(strcat('Estimate Error Unwrapped Element ',num2str(ii)))
+    legend("Error","3 \sigma interval")
+end
 
 % Plot number of points
 ptsplot = figure;

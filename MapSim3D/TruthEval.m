@@ -86,16 +86,28 @@ for ii = 1:nx
 
                   % Convert x and y position to indicies in terrain
                   [NterrainY, NterrainX] = size(terrainPersist);
-                  idxX = round(x(ii)/gsdPersist + NterrainX/2);
-                  idxY = round(y(jj)/gsdPersist + NterrainY/2);
+                  idxX = x(ii)/gsdPersist + NterrainX/2;
+                  idxY = y(jj)/gsdPersist + NterrainY/2;
 
                   % Constrain idxes
-                  idxX = max(1,idxX);
-                  idxX = min(idxX,NterrainX);
-                  idxY = max(1,idxY);
-                  idxY = min(idxY,NterrainY);
+                  idxX = max(2,idxX);
+                  idxX = min(idxX,NterrainX-1);
+                  idxY = max(2,idxY);
+                  idxY = min(idxY,NterrainY-1);
 
-                  h(jj,ii) = terrainPersist(idxY,idxX);
+                  % Upper and lower points
+                  idxXplus = floor(idxX + 1);
+                  idxXminus = ceil(idxX - 1);
+                  idxYplus = floor(idxY + 1);
+                  idxYminus = ceil(idxY - 1);
+
+                  % Interpolation values
+                  xinterp = [idxXminus, idxXplus];
+                  yinterp = [idxYminus, idxYplus];
+                  zinterp = [terrainPersist(idxYminus, idxXminus), terrainPersist(idxYminus, idxXplus);
+                      terrainPersist(idxYplus, idxXminus), terrainPersist(idxYplus, idxXplus)];
+
+                  h(jj,ii) = interp2(xinterp,yinterp,zinterp,idxX,idxY);
 
             otherwise
                 disp("Error: Invalid Truth Shape!")

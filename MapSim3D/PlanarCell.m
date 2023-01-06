@@ -13,6 +13,9 @@ classdef PlanarCell
         halfHeight_;
         nhat_; % Surface normal estimate
         dhat_; % Orthogonal distance from origin estimate
+        ntruth_; % Surface normal truth
+        dtruth_; % Orthogonal distance from origin truth
+        esterr_; % [3x1] estimate error
         Phat_; % [3x3] error covariance estimate
         points_; %[3xN] array of measurements in the global frame
         Rpoints_; %[3x3xN] array of measurement covariances in global frame
@@ -24,6 +27,9 @@ classdef PlanarCell
         rejectThresh_ = 500; % Cell reinitialized if more than this number of measurements rejected
         fitScore_ = 0; % Sum of outlier residuals
         avgFitScoreThresh_ = 1.15; % Average fit score required for division
+        filterQ_ = blkdiag(1E-10*eye(2),1E-6*eye(1)); % Process noise term for EKF
+        EKFasbatch_ = true; % Process EKF measurements as batch?
+        cellID_ = "0"; % Cell ID string used to uniquely identify cells
     end
     
     methods
@@ -119,12 +125,17 @@ classdef PlanarCell
                 % initialize
                 obj = obj.InitFromML();
             else
+                
                 % Cycle, performing updates
-                for ii = 1:nmeas
-                    obj = obj.UpdateEKF(rmat(:,ii),...
-                        Rmat(:,:,ii),...
-                        bhatmat(:,ii),...
-                        m0mat(:,ii));
+                if(obj.EKFasbatch_)
+                    obj = obj.UpdateEKFBatch(rmat,Rmat,bhatmat,m0mat);
+                else
+                    for ii = 1:nmeas
+                        obj = obj.UpdateEKF(rmat(:,ii),...
+                            Rmat(:,:,ii),...
+                            bhatmat(:,ii),...
+                            m0mat(:,ii));
+                    end
                 end
                 
                 % Check the total number of rejected measurements
@@ -142,7 +153,7 @@ classdef PlanarCell
             nhat = obj.nhat_;
             dhat = obj.dhat_;
             Pbar = obj.Phat_;
-            
+
             % Transform measurement to cell frame
             rcell = r;
             rcell(1:2) = rcell(1:2) - obj.center_;
@@ -177,6 +188,10 @@ classdef PlanarCell
             nhatplus = UnitVectorAdd(nhat,update(1:2));
             dhatplus = dhat + update(3);
             Phat = (eye(3) - K*H)*Pbar*(eye(3) - K*H)' + K*R*K';
+
+            % Add process noise for EACH measurement ingested
+            %var_reduct = Pbar - ((eye(3) - K*H)*Pbar*(eye(3) - K*H)' + K*R*K');
+            Phat = Phat + obj.filterQ_;
             
             % Assign the update
             obj.nhat_ = nhatplus;
@@ -184,6 +199,80 @@ classdef PlanarCell
             obj.Phat_ = Phat;
             obj.points_(:,end+1) = r;
             obj.Rpoints_(:,:,end+1) = R;
+        end
+
+        function obj = UpdateEKFBatch(obj, r, R, bhat, m0)
+            
+            % Locals
+            nhat = obj.nhat_;
+            dhat = obj.dhat_;
+            Pbar = obj.Phat_;
+            N = size(r,2);
+
+            % Initialize matricies for update
+            meas_res_batch = zeros(3*N,1);
+            R_batch = zeros(3*N);
+            H_batch = zeros(3*N,3);
+            
+            % Process each measurement
+            for ii = 1:N
+
+                % Indicies
+                idxs = (3*ii)-2:(3*ii);
+
+                % Transform measurement to cell frame
+                rcell = r(:,ii);
+                rcell(1:2) = rcell(1:2) - obj.center_;
+                m0cell = m0(:,ii);
+                m0cell(1:2) = m0cell(1:2) - obj.center_;
+                
+                % Predicted measurement
+                t_exp = (dhat - nhat'*m0cell)/(nhat'*bhat(:,ii));
+                r_exp = m0cell + t_exp*bhat(:,ii);
+
+                % residual
+                meas_res_batch(idxs) = rcell - r_exp;
+                
+                % Skip if observation angle is too large or expected
+                % range negative
+                theta = acos(nhat'*bhat(:,ii))*180/pi;
+                if(theta < 110 || t_exp <= 0)
+                    warning('Measurement rejected')
+                    obj.numReject_ = obj.numReject_ + 1;
+                    R_batch(idxs,idxs) = 1E10*eye(3); % Reject measurement by inflating measurement noise
+                else
+                    R_batch(idxs,idxs) = R(:,:,ii);
+                end
+                
+                % Find the measurement jacobian
+                H = obj.JacobianEval(bhat(1,ii),bhat(2,ii),bhat(3,ii),...
+                    dhat,...
+                    m0cell(1),m0cell(2),m0cell(3),...
+                    nhat(1),nhat(2),nhat(3));
+                H_batch(idxs,:) = H;
+            end
+
+            % Find the kalman gain
+            K_batch = Pbar*H_batch'/(H_batch*Pbar*H_batch' + R_batch);
+            
+            % Find the update
+            update = K_batch*meas_res_batch;
+            
+            % Perform the update
+            nhatplus = UnitVectorAdd(nhat,update(1:2));
+            dhatplus = dhat + update(3);
+            Phat = (eye(3) - K_batch*H_batch)*Pbar*(eye(3) - K_batch*H_batch)' + K_batch*R_batch*K_batch';
+
+            % Add process noise for EACH measurement ingested
+            %var_reduct = Pbar - ((eye(3) - K*H)*Pbar*(eye(3) - K*H)' + K*R*K');
+            Phat = Phat + N*obj.filterQ_;
+            
+            % Assign the update
+            obj.nhat_ = nhatplus;
+            obj.dhat_ = dhatplus;
+            obj.Phat_ = Phat;
+            obj.points_(:,end+1:end+N) = r;
+            obj.Rpoints_(:,:,end+1:end+N) = R;
         end
         
         function J = JacobianEval(~,bhat_1,bhat_2,bhat_3,d,m0_1,m0_2,m0_3,nhat_1,nhat_2,nhat_3)
@@ -238,6 +327,12 @@ classdef PlanarCell
             northeast = PlanarCell();
             southwest = PlanarCell();
             southeast = PlanarCell();
+
+            % Assign cell IDs
+            northeast.cellID_ = strcat(obj.cellID_,"1");
+            northwest.cellID_ = strcat(obj.cellID_,"2");
+            southwest.cellID_ = strcat(obj.cellID_,"3");
+            southeast.cellID_ = strcat(obj.cellID_,"4");
             
             % Assign children bounds
             northwest.center_ = obj.center_ + [-obj.halfWidth_;
@@ -518,6 +613,10 @@ classdef PlanarCell
         end
         
         function obj = CountOutliers(obj, rmat, Rmat, bhatmat, m0mat)
+
+            if(strcmp(obj.cellID_,"013"))
+                disp("Counting outliers in target cell")
+            end
             
             % locals
             npts = size(rmat,2);
@@ -645,11 +744,93 @@ classdef PlanarCell
                                 mat(jj,ii,:) = item;
                             end
                         end
+
+                    case 'EstErrNorm'
+                        item = norm(obj.esterr_);
+                        mat(leftbound:rightbound,upbound:downbound,:) = item;
+
+                    case 'EstErr'
+                        item = obj.esterr_;
+                        for ii = leftbound:rightbound
+                            for jj = upbound:downbound
+                                mat(jj,ii,:) = item;
+                            end
+                        end
+
+                    case 'EstVar'
+                        item = [obj.Phat_(1,1), obj.Phat_(2,2), obj.Phat_(3,3)]';
+                        for ii = leftbound:rightbound
+                            for jj = upbound:downbound
+                                mat(jj,ii,:) = item;
+                            end
+                        end
+
                     otherwise
                         error("Invalid Query Metric")
                 end
             end
             
+        end
+
+        function obj = FindTruthPlane(obj,truthgsd,terrain)
+
+            % Find error if this cell has a valid estimate
+            if ~obj.isValid_
+                obj.ntruth_ = [NaN, NaN, NaN]';
+                obj.dtruth_ = NaN;
+                obj.esterr_ = [NaN, NaN, NaN]';
+                return;
+            end
+
+            % Check children
+            if(obj.isDivided_)
+                obj.northeast_ = obj.northeast_.FindTruthPlane(truthgsd,terrain);
+                obj.southeast_ = obj.southeast_.FindTruthPlane(truthgsd,terrain);
+                obj.southwest_ = obj.southwest_.FindTruthPlane(truthgsd,terrain);
+                obj.northwest_ = obj.northwest_.FindTruthPlane(truthgsd,terrain);
+            else
+                % Find truth sample points
+                gsd = obj.halfWidth_/5;
+                xtruthsamp = (-obj.halfWidth_:gsd:obj.halfWidth_) + obj.center_(1);
+                ytruthsamp = (-obj.halfHeight_:gsd:obj.halfHeight_) + obj.center_(2);
+                ztruthsamp = TruthEval(xtruthsamp,ytruthsamp,terrain);
+                
+                % Convert truth sample points to 3D points
+                [Ny, Nx] = size(ztruthsamp);
+                N = Ny*Nx;
+                pts = zeros(3,Ny);
+                ptsR = repmat(eye(3),[1, 1, N]);
+                idx = 1;
+                for ii = 1:Nx
+                    for jj = 1:Ny
+                        pts(:,idx) = [xtruthsamp(ii), ytruthsamp(jj), ztruthsamp(jj,ii)]';
+                        idx = idx+1;
+                    end
+                end
+
+                % Create a duplicate of this object
+                truthobj = PlanarCell();
+                truthobj.center_ = obj.center_;
+                truthobj.points_ = pts;
+                truthobj.Rpoints_ = ptsR;
+
+                % Find ML plane estimate for truth
+                truthobj = truthobj.InitFromML();
+
+                % Populate truth estimate
+                if(isempty(truthobj.nhat_))
+                    obj.ntruth_ = [NaN, NaN, NaN]';
+                    obj.dtruth_ = NaN;
+                    obj.esterr_ = [NaN, NaN, NaN]';
+                else
+                    obj.ntruth_ = truthobj.nhat_;
+                    obj.dtruth_ = truthobj.dhat_;
+
+                    % Populate error
+                    obj.esterr_ = [UnitVectorSubtract(obj.ntruth_,obj.nhat_); obj.dtruth_ - obj.dhat_];
+                end                
+            end
+
         end
         
     end
